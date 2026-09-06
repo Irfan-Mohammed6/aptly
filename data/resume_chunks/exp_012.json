@@ -1,0 +1,7 @@
+{
+  "id": "exp_012",
+  "company": "MSA Software",
+  "role": "Python Developer",
+  "text": "Built end-to-end web scraping and data extraction pipelines using Python and Node.js, processing data from diverse sources including websites, PDFs, and emails, leveraging prompt engineering and LLM fine-tuning to automate data transformation.",
+  "tags": ["web scraping", "data extraction", "Python", "Node.js", "prompt engineering"]
+}

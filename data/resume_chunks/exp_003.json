@@ -1,0 +1,7 @@
+{
+  "id": "exp_003",
+  "company": "Ziplabs",
+  "role": "Associate Software Engineer",
+  "text": "Engineered an AI-assisted web crawling and extraction pipeline across 100K records (avg. 3 URLs per record), improving full pipeline run time by 77%, from 3 months to 21 days.",
+  "tags": ["web crawling", "AI extraction", "pipeline optimization"]
+}

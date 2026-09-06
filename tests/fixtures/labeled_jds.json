@@ -1,0 +1,13 @@
+[
+  {
+    "name": "ai-data-backend-role",
+    "requirements": [
+      { "requirement": "Experience building high-throughput ETL pipelines in Python", "expected_chunk_id": "exp_001" },
+      { "requirement": "Experience integrating LLMs into production validation workflows", "expected_chunk_id": "exp_002" },
+      { "requirement": "Experience building and deploying FastAPI services on AWS", "expected_chunk_id": "exp_004" },
+      { "requirement": "Experience evaluating multiple LLMs for cost, latency, and accuracy", "expected_chunk_id": "exp_005" },
+      { "requirement": "Experience with prompt engineering for structured output", "expected_chunk_id": "exp_009" },
+      { "requirement": "Experience automating data workflows with cron and scripts", "expected_chunk_id": "exp_010" }
+    ]
+  }
+]

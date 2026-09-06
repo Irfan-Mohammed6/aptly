@@ -1,0 +1,7 @@
+{
+  "id": "exp_007",
+  "company": "Ziplabs",
+  "role": "Associate Software Engineer",
+  "text": "Designed and built end-to-end scalable data infrastructure, ETL pipelines, and AI-powered enrichment systems to process and deliver datasets ranging from 100K to 10 million records.",
+  "tags": ["data infrastructure", "ETL", "scalability", "system design"]
+}

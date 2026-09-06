@@ -1,0 +1,11 @@
+data/chroma/
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+*.egg-info/
+
+# Personal documents containing contact info (phone/email) — not for a public repo.
+docs/*.pdf
+*:Zone.Identifier
