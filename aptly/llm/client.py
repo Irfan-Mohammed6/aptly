@@ -62,6 +62,23 @@ def _generate(prompt: str) -> str:
     schema; low temperature makes it follow the prompt's template far more
     reliably.
 
+    `num_predict` (config.OLLAMA_NUM_PREDICT) is set explicitly rather than
+    left unbounded. This is a hard-won fix, not a preemptive one: without
+    it, a real request (resume-chunk extraction on a full resume) once
+    caused the model to lose track of the JSON structure it was building —
+    after Ollama's context window filled up and triggered context-shift, it
+    never produced a stop token, and the request ran for over an hour
+    before being killed by hand. `num_predict` hard-caps generation length
+    so a future prompt that hits the same failure mode can't hang
+    indefinitely regardless of the cause. `num_ctx` (config.OLLAMA_NUM_CTX)
+    is deliberately left at Ollama's own default rather than raised — an
+    earlier version of this fix raised it to give more headroom, but that
+    slowed down every call (bigger context window = bigger KV cache read
+    per generated token, and CPU decoding is largely memory-bandwidth-bound)
+    without addressing the actual problem, which turned out to be prompt
+    content, not context size — see
+    `aptly.api.routes_resume._clean_resume_text`.
+
     Args:
         prompt: The full prompt text to send, typically produced by one of
             the functions in `aptly.llm.prompts`.
@@ -82,9 +99,13 @@ def _generate(prompt: str) -> str:
             "prompt": prompt,
             "format": "json",
             "stream": False,
-            "options": {"temperature": 0.1},
+            "options": {
+                "temperature": 0.1,
+                "num_ctx": config.OLLAMA_NUM_CTX,
+                "num_predict": config.OLLAMA_NUM_PREDICT,
+            },
         },
-        timeout=120,
+        timeout=config.OLLAMA_TIMEOUT_SECONDS,
     )
     response.raise_for_status()
     return response.json()["response"]

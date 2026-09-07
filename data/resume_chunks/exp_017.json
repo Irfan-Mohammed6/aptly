@@ -1,7 +1,14 @@
 {
-  "id": "exp_005",
   "company": "Ziplabs",
   "role": "Associate Software Engineer",
   "text": "Conducted multi-model LLM evaluation across cost, latency, accuracy, and output consistency, comparing open source models to select the optimal model per pipeline stage.",
-  "tags": ["LLM evaluation", "model selection", "open-source models"]
+  "tags": [
+    "multi-model LLM evaluation",
+    "cost",
+    "latency",
+    "accuracy",
+    "output consistency",
+    "open source models"
+  ],
+  "id": "exp_017"
 }

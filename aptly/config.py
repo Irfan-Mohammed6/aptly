@@ -33,6 +33,49 @@ OLLAMA_MODEL = "llama3.2:3b"
 #: the model is pulled.
 OLLAMA_HOST = "http://localhost:11434"
 
+#: Timeout, in seconds, for a single call to Ollama's /api/generate. CPU-only
+#: inference on a 3B model is slow, and scales with both input and output
+#: length — a short JD's worth of requirements extracts in well under a
+#: minute, but a full multi-bullet resume (see aptly.api.routes_resume) can
+#: take several minutes to fully extract. Generous by design: a slow-but-
+#: correct answer beats a fast timeout on a legitimately large input. This
+#: is a client-side backstop, not the primary defense against a slow call —
+#: see OLLAMA_NUM_PREDICT below for why. Set high (600s) deliberately: once
+#: OLLAMA_NUM_PREDICT bounds the server side, there's no risk in waiting
+#: longer client-side — a resume-extraction call was observed taking longer
+#: than the previous 300s value on typical CPU throughput, timing out the
+#: client even though the (now-bounded) server-side call would have
+#: finished if given more time.
+OLLAMA_TIMEOUT_SECONDS = 600
+
+#: Context window size (prompt + completion, in tokens) requested from
+#: Ollama per call, via the `num_ctx` generation option. Left at Ollama's
+#: own default deliberately, not raised — on CPU, generation speed is
+#: largely memory-bandwidth-bound, and a bigger context window means a
+#: bigger KV cache read at *every* generated token, so raising this has a
+#: real, measured throughput cost. An earlier version of this fix raised it
+#: to 8192 to give a struggling resume-extraction prompt more headroom, but
+#: that slowed down *every* call (including the previously-fast JD calls)
+#: without actually fixing the underlying problem — see
+#: aptly.api.routes_resume._clean_resume_text for the fix that did (shrink
+#: the prompt itself, at the source, instead of giving the model more room
+#: to be slow in). OLLAMA_NUM_PREDICT below is what actually prevents the
+#: runaway-generation failure that motivated touching this in the first
+#: place; leaving num_ctx alone keeps normal-sized calls fast.
+OLLAMA_NUM_CTX = 4096
+
+#: Hard cap, in tokens, on how much a single call is allowed to generate,
+#: via the `num_predict` generation option. This is the actual fix for a
+#: real observed failure: without it, a request once lost track of the JSON
+#: structure it was building (after Ollama's context-shift behavior kicked
+#: in near the context window limit) and never produced a natural stop
+#: token — generation ran for over an hour before being killed by hand.
+#: With this set, Ollama stops generating and returns whatever it has once
+#: this many tokens are produced, rather than continuing until a stop token
+#: that might never come — bounding the worst case regardless of prompt or
+#: context-window size.
+OLLAMA_NUM_PREDICT = 2048
+
 # --- Embedding settings ------------------------------------------------------
 
 #: sentence-transformers model used to embed all text for retrieval (resume
@@ -92,3 +135,20 @@ RESUME_COLLECTION = "resume_chunks"
 
 #: Name of the Chroma collection holding embedded concept notes.
 CONCEPT_NOTES_COLLECTION = "concept_notes"
+
+# --- CORS ----------------------------------------------------------------------
+
+#: Browser origins allowed to call this API cross-origin. Needed because the
+#: intended deployment shape is: a static frontend hosted publicly (e.g. on
+#: Vercel/Netlify), talking to this FastAPI backend running locally on
+#: *that visitor's own machine* (http://localhost:8000) — Ollama and Chroma
+#: are never hosted remotely, only the frontend is. The browser enforces
+#: CORS on that cross-origin call (hosted frontend -> localhost:8000), so
+#: the hosted frontend's origin must be listed here. The two local Vite dev
+#: server ports are included so `npm run dev` works out of the box; add your
+#: deployed frontend's URL (e.g. "https://aptly-yourname.vercel.app") once
+#: you know it.
+ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+]

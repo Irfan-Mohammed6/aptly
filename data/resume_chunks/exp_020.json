@@ -1,0 +1,15 @@
+{
+  "company": "Ziplabs",
+  "role": "Associate Software Engineer",
+  "text": "Applied prompt engineering to fine-tune GPT-3.5-Turbo for structured JSON output, alongside multi-model evaluation of open-source LLMs (orca2, llama3) for task-specific accuracy.",
+  "tags": [
+    "prompt engineering",
+    "GPT-3.5-Turbo",
+    "structured JSON output",
+    "multi-model LLM evaluation",
+    "orca2",
+    "llama3",
+    "task-specific accuracy"
+  ],
+  "id": "exp_020"
+}

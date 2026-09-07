@@ -72,6 +72,51 @@ class ExtractedRequirements(BaseModel):
     requirements: list[ExtractedRequirement]
 
 
+class ExtractedResumeChunk(BaseModel):
+    """One resume bullet/achievement extracted from an uploaded resume.
+
+    Mirrors the shape of a hand-written resume chunk JSON file (see
+    docs/ARCHITECTURE.md §5) — produced automatically by
+    `aptly.llm.prompts.extract_resume_chunks_prompt` from raw resume text
+    instead of being hand-authored. `aptly.api.routes_resume.upload_resume`
+    converts a list of these into on-disk JSON files via
+    `aptly.ingestion.resume.write_resume_chunks`.
+
+    Attributes:
+        company: The employer this bullet is from, e.g. "ZipLabs". Empty
+            string if the model couldn't determine it (e.g. for a resume
+            section without a clear company heading, like a projects list).
+        role: The job title held at that company, e.g. "Associate Software
+            Engineer". Empty string if not determinable.
+        text: The bullet/achievement text itself, copied as close to
+            verbatim as possible from the source resume — this is what gets
+            embedded and retrieved against, so it should read like the
+            original bullet, not a summary of it.
+        tags: A list of specific skills/technologies/concepts mentioned in
+            this bullet, e.g. ["ETL", "Python", "MongoDB"].
+    """
+
+    company: str
+    role: str
+    text: str
+    tags: list[str]
+
+
+class ExtractedResumeChunks(BaseModel):
+    """The full output of one resume-chunking LLM call.
+
+    Produced by `aptly.llm.client.call(extract_resume_chunks_prompt(resume_text), ExtractedResumeChunks)`
+    — see `aptly.api.routes_resume.upload_resume`.
+
+    Attributes:
+        chunks: One `ExtractedResumeChunk` per bullet/achievement found in
+            the resume text, in the order they appeared in the source
+            document.
+    """
+
+    chunks: list[ExtractedResumeChunk]
+
+
 class MatchJudgment(BaseModel):
     """The output of one borderline-similarity match-judgment LLM call.
 

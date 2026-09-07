@@ -1,7 +1,15 @@
 {
-  "id": "exp_001",
   "company": "Ziplabs",
   "role": "Associate Software Engineer",
   "text": "Designed and implemented high-throughput ETL pipelines in Python and TypeScript, processing and upserting up to 25,000 records per minute into MongoDB with error handling, schema validation and transformation logic.",
-  "tags": ["ETL", "Python", "TypeScript", "MongoDB", "data pipelines"]
+  "tags": [
+    "ETL",
+    "Python",
+    "TypeScript",
+    "MongoDB",
+    "error handling",
+    "schema validation",
+    "transformation logic"
+  ],
+  "id": "exp_013"
 }

@@ -23,6 +23,7 @@ inference: everything runs on your machine via [Ollama](https://ollama.com) and
 - [Indexing your data](#indexing-your-data)
 - [Running the API](#running-the-api)
 - [API reference](#api-reference)
+- [Frontend](#frontend)
 - [Evaluating retrieval quality](#evaluating-retrieval-quality)
 - [Running each script standalone](#running-each-script-standalone)
 - [Configuration](#configuration)
@@ -76,19 +77,22 @@ aptly/
 │   │   └── match.py
 │   ├── scoring.py                 # deterministic fit-score computation
 │   ├── api/                       # the FastAPI application
-│   │   ├── main.py
+│   │   ├── main.py                  # wiring + CORS
 │   │   ├── routes_jd.py
 │   │   ├── routes_notes.py
+│   │   ├── routes_resume.py         # POST /upload-resume
 │   │   └── models.py
 │   └── eval/
 │       └── retrieval_eval.py      # recall@k against hand-labeled fixtures
 ├── scripts/
 │   └── reindex.py                 # rebuild the Chroma index from data/*
 ├── data/
-│   ├── resume_chunks/*.json       # your resume, source of truth
+│   ├── resume_chunks/*.json       # your resume, source of truth (hand-written or auto-uploaded)
 │   ├── concept_notes/*.md         # your study notes, source of truth
 │   └── chroma/                    # disposable vector index (gitignored)
 ├── tests/fixtures/labeled_jds.json
+├── frontend/                      # React (Vite) UI — see Frontend section below
+│   └── src/
 └── docs/
     ├── ARCHITECTURE.md
     └── AI_Job_Search_Copilot_POC.md
@@ -101,6 +105,7 @@ aptly/
 - Python 3.10+
 - [Ollama](https://ollama.com) installed and runnable locally
 - ~2 GB free disk space for the local LLM, plus a small amount for the embedding model
+- Node.js 18+ and npm, only if you want to run the [frontend](#frontend)
 
 ---
 
@@ -243,11 +248,29 @@ uvicorn aptly.api.main:app --reload
 ```
 
 Then visit **http://127.0.0.1:8000/docs** for interactive Swagger UI covering all
-three endpoints, or use `curl` as shown below.
+four endpoints, use `curl` as shown below, or run the [frontend](#frontend) for a full UI.
 
 ---
 
 ## API reference
+
+### `POST /upload-resume`
+
+Upload a PDF resume and automatically populate `data/resume_chunks/` from it — an
+alternative to hand-writing the JSON files described in
+[Resume chunks](#resume-chunks). Extracts the PDF's text, asks the LLM to split it
+into per-bullet chunks, writes them to disk, and re-indexes.
+
+```bash
+curl -X POST http://localhost:8000/upload-resume -F "file=@/path/to/your/resume.pdf"
+```
+
+```json
+{ "chunks_created": 12 }
+```
+
+This can take several minutes on CPU-only inference — a whole resume is a larger
+extraction task than a single job description.
 
 ### `POST /analyze-jd`
 
@@ -322,6 +345,48 @@ expected — it's the tradeoff for zero API cost and full offline operation.
 
 ---
 
+## Frontend
+
+A React (Vite) UI lives in `frontend/`, covering all four endpoints (analyze a JD,
+upload a resume, add a note) as tabs.
+
+**Important — read before hosting this anywhere:** the frontend can be hosted
+publicly (e.g. on Vercel or Netlify), but the *backend* cannot — Ollama only ever
+runs locally, and a remote server has no way to reach `http://localhost:11434` on
+your machine. So this frontend is built to talk to a backend running on
+**your own computer** at `http://localhost:8000`, exactly as described in
+[Running the API](#running-the-api), regardless of where the frontend itself is
+served from. A hosted deployment of this frontend is only functional for a visitor
+who has cloned this repo and is running the backend + Ollama locally — see
+[docs/ARCHITECTURE.md §10](docs/ARCHITECTURE.md) for the full reasoning.
+
+### Run locally
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Visit **http://localhost:5173**. The backend (`uvicorn aptly.api.main:app --reload`)
+must also be running — see [Running the API](#running-the-api).
+
+### Deploy (optional)
+
+1. Push this repo to GitHub (already done if you're reading this from the repo).
+2. Import it into [Vercel](https://vercel.com) or [Netlify](https://netlify.com),
+   setting the project root to `frontend/`. Both auto-detect Vite.
+3. Add `frontend/.env.example`'s content as an environment variable
+   (`VITE_API_BASE_URL=http://localhost:8000`) in the hosting platform's dashboard —
+   it's the same value for every visitor, since it always points at *their own*
+   local backend, not the hosting platform's servers.
+4. Add the deployed URL (e.g. `https://aptly-yourname.vercel.app`) to
+   `config.ALLOWED_ORIGINS` in `aptly/config.py` and restart your local backend —
+   otherwise the browser will block the hosted frontend's requests to your
+   `localhost:8000` as a CORS violation.
+
+---
+
 ## Evaluating retrieval quality
 
 ```bash
@@ -370,6 +435,8 @@ All tunables live in [`aptly/config.py`](aptly/config.py), fully documented inli
 |---|---|---|
 | `OLLAMA_MODEL` | `llama3.2:3b` | Which local model handles requirement extraction and match judgment. |
 | `OLLAMA_HOST` | `http://localhost:11434` | Where the Ollama server is reachable. |
+| `OLLAMA_NUM_CTX` | `8192` | Context window (tokens) requested per call — see [Known limitations](#known-limitations). |
+| `OLLAMA_NUM_PREDICT` | `2048` | Hard cap on generated tokens per call — prevents runaway generation. |
 | `EMBEDDING_MODEL` | `all-MiniLM-L6-v2` | sentence-transformers model used for all retrieval embeddings. |
 | `TOP_K` | `3` | How many nearest neighbours to retrieve per query. |
 | `GAP_THRESHOLD` | `0.45` | Below this similarity, a requirement is a "gap" with no LLM call. |
@@ -389,8 +456,15 @@ constants — tune them against your own data using
   around (a two-field `label`/`detail` schema). Swapping in a larger model may need
   less scaffolding here, but would cost more RAM/latency.
 - **Thresholds are guesses**, not tuned constants — see [Configuration](#configuration).
-- **CPU-only inference is slow** — expect tens of seconds per JD analysis on typical
-  consumer hardware.
+- **CPU-only inference is slow** — expect tens of seconds per JD analysis, and
+  potentially several minutes for a full resume upload, on typical consumer hardware.
+- **Runaway generation is possible, and was observed once during development:** a
+  request with no `num_predict` cap and a too-small context window caused the model to
+  lose track of the JSON structure it was building and never emit a stop token,
+  running for over an hour before being killed by hand. `OLLAMA_NUM_CTX` and
+  `OLLAMA_NUM_PREDICT` in `config.py` bound this now, but if a request seems to hang
+  far longer than its usual latency, check `ollama ps` — `ollama stop <model>` unloads
+  a stuck model without needing to kill the OS process.
 - **No multi-user support, no auth** — this is a single-user, local-first tool by
   design (see the original scope in [docs/AI_Job_Search_Copilot_POC.md](docs/AI_Job_Search_Copilot_POC.md)).
 

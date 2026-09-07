@@ -82,6 +82,18 @@ class AddNoteResponse(BaseModel):
     note_id: str
 
 
+class UploadResumeResponse(BaseModel):
+    """Response body for `POST /upload-resume`.
+
+    Attributes:
+        chunks_created: How many new resume chunk JSON files were written
+            to `data/resume_chunks/` and indexed, from the uploaded PDF —
+            see `aptly.api.routes_resume.upload_resume`.
+    """
+
+    chunks_created: int
+
+
 class PrepListRequest(BaseModel):
     """Request body for `POST /prep-list`.
 

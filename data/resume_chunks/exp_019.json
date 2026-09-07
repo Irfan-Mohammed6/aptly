@@ -1,0 +1,15 @@
+{
+  "company": "Ziplabs",
+  "role": "Associate Software Engineer",
+  "text": "Built a web scraping and AI extraction pipeline using BeautifulSoup, Puppeteer and GPT-3.5-Turbo \u2014 achieving 90% data coverage and data accuracy across diverse and dynamic website structures.",
+  "tags": [
+    "web scraping",
+    "AI extraction",
+    "BeautifulSoup",
+    "Puppeteer",
+    "GPT-3.5-Turbo",
+    "data coverage",
+    "data accuracy"
+  ],
+  "id": "exp_019"
+}

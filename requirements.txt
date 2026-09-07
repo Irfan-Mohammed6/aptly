@@ -5,3 +5,5 @@ chromadb
 sentence-transformers
 requests
 python-frontmatter
+pypdf
+python-multipart

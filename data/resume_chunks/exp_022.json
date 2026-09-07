@@ -1,0 +1,13 @@
+{
+  "company": "Ziplabs",
+  "role": "Associate Software Engineer",
+  "text": "Developed ExpressJS APIs to integrate Node.js scraping output with Python data transformation pipelines, enabling seamless downstream MongoDB delivery.",
+  "tags": [
+    "ExpressJS",
+    "Node.js scraping",
+    "Python data transformation",
+    "MongoDB delivery",
+    "seamless integration"
+  ],
+  "id": "exp_022"
+}

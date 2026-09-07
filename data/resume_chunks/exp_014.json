@@ -1,0 +1,13 @@
+{
+  "company": "Ziplabs",
+  "role": "Associate Software Engineer",
+  "text": "Built LLM-powered validation workflows using open-source models \u2014 achieving 97% accuracy and improving validation throughput for 500K records by 40%.",
+  "tags": [
+    "LLM",
+    "open-source models",
+    "accuracy",
+    "validation throughput",
+    "500K records"
+  ],
+  "id": "exp_014"
+}

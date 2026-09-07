@@ -1,7 +1,0 @@
-{
-  "id": "exp_011",
-  "company": "MSA Software",
-  "role": "Python Developer",
-  "text": "Developed ExpressJS APIs to integrate Node.js scraping output with Python data transformation pipelines, enabling seamless downstream MongoDB delivery.",
-  "tags": ["ExpressJS", "Node.js", "API integration", "MongoDB"]
-}

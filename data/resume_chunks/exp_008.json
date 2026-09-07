@@ -1,7 +1,0 @@
-{
-  "id": "exp_008",
-  "company": "MSA Software",
-  "role": "Python Developer",
-  "text": "Built a web scraping and AI extraction pipeline using BeautifulSoup, Puppeteer and GPT-3.5-Turbo, achieving 90% data coverage and data accuracy across diverse and dynamic website structures.",
-  "tags": ["web scraping", "BeautifulSoup", "Puppeteer", "GPT-3.5-Turbo"]
-}

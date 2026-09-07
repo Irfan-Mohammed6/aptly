@@ -26,9 +26,36 @@ Run standalone: not applicable. This is a library module with no
 """
 
 import json
+from collections.abc import Iterator
+from pathlib import Path
 
 from aptly import config
 from aptly.retrieval import store
+
+
+def _next_chunk_id() -> Iterator[str]:
+    """Yield fresh `exp_NNN` ids that don't collide with any existing resume chunk file.
+
+    Internal helper for `write_resume_chunks` — not part of the module's
+    public interface. Scans existing filenames for the `exp_NNN` pattern to
+    find the highest number in use, then yields consecutive ids after it, so
+    a batch of newly uploaded chunks never overwrites a hand-written one.
+
+    Yields:
+        Strings of the form `exp_004`, `exp_005`, ... continuing from
+        whatever the highest existing `exp_NNN` file on disk is (or starting
+        at `exp_001` if there are none yet).
+    """
+    existing = [f.stem for f in config.RESUME_CHUNKS_DIR.glob("exp_*.json")]
+    numbers = []
+    for stem in existing:
+        suffix = stem.removeprefix("exp_")
+        if suffix.isdigit():
+            numbers.append(int(suffix))
+    next_number = max(numbers, default=0) + 1
+    while True:
+        yield f"exp_{next_number:03d}"
+        next_number += 1
 
 
 def load_resume_chunks() -> list[dict]:
@@ -57,6 +84,46 @@ def load_resume_chunks() -> list[dict]:
             chunk.setdefault("id", file.stem)
             chunks.append(chunk)
     return chunks
+
+
+def write_resume_chunks(chunks: list[dict]) -> list[Path]:
+    """Write a batch of resume chunks to disk as individual JSON files, file-first.
+
+    Used by `aptly.api.routes_resume.upload_resume` to persist the chunks an
+    LLM extracted from an uploaded resume (see
+    `aptly.llm.schemas.ExtractedResumeChunk`) as the same kind of on-disk
+    files a human would otherwise hand-write — see docs/ARCHITECTURE.md §5.
+    As with `aptly.ingestion.notes.write_concept_note`, this is deliberately
+    "file-first": the JSON files are written to `config.RESUME_CHUNKS_DIR`
+    before any embedding/Chroma write happens (that's the caller's job, via
+    `ingest_resume_chunks`), so a failure partway through embedding never
+    loses the extracted data — it's already safely on disk and
+    `scripts/reindex.py` will pick it up on the next rebuild.
+
+    Ids are freshly generated (`exp_NNN`, continuing from the highest
+    existing number — see `_next_chunk_id`) rather than reusing anything
+    from the input, since freshly extracted chunks have no pre-existing id
+    of their own.
+
+    Args:
+        chunks: A list of dicts, each with `company`, `role`, `text`, and
+            `tags` keys — in practice, the `chunks` field of an
+            `aptly.llm.schemas.ExtractedResumeChunks`, converted to plain
+            dicts (e.g. via `[c.model_dump() for c in extracted.chunks]`).
+
+    Returns:
+        A list of `Path`s to the newly written JSON files, one per input
+        chunk, in the same order as `chunks`.
+    """
+    ids = _next_chunk_id()
+    paths = []
+    for chunk in chunks:
+        chunk_id = next(ids)
+        path = config.RESUME_CHUNKS_DIR / f"{chunk_id}.json"
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump({**chunk, "id": chunk_id}, f, indent=2)
+        paths.append(path)
+    return paths
 
 
 def ingest_resume_chunks(chunks: list[dict]) -> None:
