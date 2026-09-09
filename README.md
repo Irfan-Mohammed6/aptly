@@ -27,6 +27,7 @@ inference: everything runs on your machine via [Ollama](https://ollama.com) and
 - [Evaluating retrieval quality](#evaluating-retrieval-quality)
 - [Running each script standalone](#running-each-script-standalone)
 - [Configuration](#configuration)
+- [Model selection](#model-selection)
 - [Known limitations](#known-limitations)
 - [License](#license)
 
@@ -418,6 +419,7 @@ Every entry point in the project and the exact command to run it on its own:
 | `aptly/api/main.py` | `uvicorn aptly.api.main:app --reload` | Yes (for `/analyze-jd`, `/prep-list`) | Starts the HTTP API. |
 | `scripts/reindex.py` | `python scripts/reindex.py` | No | Rebuilds both Chroma collections from `data/*`. |
 | `aptly/eval/retrieval_eval.py` | `python -m aptly.eval.retrieval_eval` | No | Prints a retrieval recall@k report. |
+| `aptly/eval/model_benchmark.py` | `python -m aptly.eval.model_benchmark` | Yes (all models in `MODELS_TO_BENCHMARK`) | Benchmarks candidate models against Aptly's real prompts — see [Model selection](#model-selection). |
 
 Every other module under `aptly/` (`config.py`, `llm/*.py`, `retrieval/*.py`,
 `scoring.py`, `ingestion/*.py`, `api/routes_*.py`, `api/models.py`) is a library module
@@ -445,6 +447,22 @@ All tunables live in [`aptly/config.py`](aptly/config.py), fully documented inli
 `GAP_THRESHOLD` and `CONFIDENT_MATCH_THRESHOLD` are starting guesses, not measured
 constants — tune them against your own data using
 [the retrieval eval script](#evaluating-retrieval-quality).
+
+---
+
+## Model selection
+
+`llama3.2:3b` (the default in `config.py`) was chosen specifically for CPU-only, no-GPU
+hardware — see [docs/MODEL_SELECTION.md](docs/MODEL_SELECTION.md) for the full
+rationale, an empirical benchmark of it against two alternatives
+(`qwen2.5:3b`, `phi3:mini`) on real project prompts, and researched (not yet
+benchmarked here) recommendations for GPU-equipped hardware. Re-run the comparison
+yourself:
+
+```bash
+ollama pull qwen2.5:3b && ollama pull phi3:mini
+python -m aptly.eval.model_benchmark
+```
 
 ---
 
