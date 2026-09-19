@@ -54,9 +54,10 @@ Instead:
    uncalibrated and non-reproducible.
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full call sequences, data
-contracts, and the reasoning behind every architectural choice, and
+contracts, and the reasoning behind every architectural choice,
 [docs/AI_Job_Search_Copilot_POC.md](docs/AI_Job_Search_Copilot_POC.md) for the original
-product requirements.
+product requirements, and [docs/RUNNING.md](docs/RUNNING.md) for a one-page command
+reference to start everything (Ollama, backend, frontend) once setup below is done.
 
 ---
 
@@ -350,6 +351,9 @@ expected — it's the tradeoff for zero API cost and full offline operation.
 
 A React (Vite) UI lives in `frontend/`, covering all four endpoints (analyze a JD,
 upload a resume, add a note) as tabs.
+
+**Live deployment:** https://aptly-job-assistant.netlify.app (frontend only — it needs
+the backend and Ollama running locally, see below).
 
 **Important — read before hosting this anywhere:** the frontend can be hosted
 publicly (e.g. on Vercel or Netlify), but the *backend* cannot — Ollama only ever

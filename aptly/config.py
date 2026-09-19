@@ -151,4 +151,5 @@ CONCEPT_NOTES_COLLECTION = "concept_notes"
 ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
+    "https://aptly-job-assistant.netlify.app",
 ]
