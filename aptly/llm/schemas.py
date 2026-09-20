@@ -83,7 +83,7 @@ class ExtractedResumeChunk(BaseModel):
     `aptly.ingestion.resume.write_resume_chunks`.
 
     Attributes:
-        company: The employer this bullet is from, e.g. "ZipLabs". Empty
+        company: The employer this bullet is from, e.g. "Acme Corp". Empty
             string if the model couldn't determine it (e.g. for a resume
             section without a clear company heading, like a projects list).
         role: The job title held at that company, e.g. "Associate Software

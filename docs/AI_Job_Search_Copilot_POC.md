@@ -108,10 +108,10 @@ Retrieval is **not** JD-vs-resume top-k. Naive whole-JD embedding only ever retu
 ```json
 {
   "id": "exp_001",
-  "company": "ZipLabs",
-  "role": "Associate Software Engineer",
-  "text": "Designed and implemented high-throughput ETL pipelines in Python, processing 25,000 records/min into MongoDB with error handling and schema validation.",
-  "tags": ["ETL", "Python", "MongoDB", "data pipelines"]
+  "company": "Acme Corp",
+  "role": "Backend Engineer",
+  "text": "Built ETL pipelines in Python processing 2M records/day into PostgreSQL, with schema validation and automatic retries.",
+  "tags": ["ETL", "Python", "PostgreSQL", "data pipelines"]
 }
 ```
 
@@ -133,7 +133,7 @@ No weight changes. Fine-tuning updates model weights permanently...
   "best_match_chunk_id": "exp_001",
   "similarity": 0.81,
   "verdict": "match",
-  "evidence": "Designed and implemented high-throughput ETL pipelines in Python, processing 25,000 records/min into MongoDB..."
+  "evidence": "Built ETL pipelines in Python processing 2M records/day into PostgreSQL..."
 }
 ```
 A requirement whose best-match similarity falls below threshold (e.g. Kubernetes, if never mentioned in any resume chunk) is flagged `"verdict": "gap"` without needing an LLM judgment call — the retrieval step alone surfaces it.

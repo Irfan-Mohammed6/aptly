@@ -9,3 +9,8 @@ venv/
 # Personal documents containing contact info (phone/email) — not for a public repo.
 docs/*.pdf
 *:Zone.Identifier
+
+# Your own resume data — personal, so never committed. Created locally by the
+# Resumes screen / POST /upload-resume; see the README to add your own.
+data/resume_chunks/*.json
+data/resumes.json

@@ -157,10 +157,11 @@ name like `exp_001.json` is recommended.
 ```json
 {
   "id": "exp_001",
-  "company": "ZipLabs",
-  "role": "Associate Software Engineer",
-  "text": "Designed and implemented high-throughput ETL pipelines in Python, processing 25,000 records/min into MongoDB with error handling and schema validation.",
-  "tags": ["ETL", "Python", "MongoDB", "data pipelines"]
+  "resume_id": "default",
+  "company": "Acme Corp",
+  "role": "Backend Engineer",
+  "text": "Built ETL pipelines in Python processing 2M records/day into PostgreSQL, with schema validation and automatic retries.",
+  "tags": ["ETL", "Python", "PostgreSQL", "data pipelines"]
 }
 ```
 
