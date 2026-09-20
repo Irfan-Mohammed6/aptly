@@ -10,6 +10,7 @@ import Chat from "./components/Chat.jsx";
 import Icon from "./components/Icon.jsx";
 import Notes from "./components/Notes.jsx";
 import Resumes from "./components/Resumes.jsx";
+import Select from "./components/Select.jsx";
 import useResumes from "./useResumes.js";
 
 /**
@@ -125,20 +126,12 @@ export default function App() {
             <p className="page-sub">{view.sub}</p>
           </div>
           {activeView === "analyze" && resumeState.resumes.length > 0 && (
-            <div className="select-wrap">
-              <label htmlFor="resume-select">Analyze with</label>
-              <select
-                id="resume-select"
-                value={resumeState.activeId ?? ""}
-                onChange={(event) => resumeState.setActiveId(event.target.value)}
-              >
-                {resumeState.resumes.map((r) => (
-                  <option key={r.id} value={r.id}>
-                    {r.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <Select
+              label="Analyze with"
+              value={resumeState.activeId ?? ""}
+              options={resumeState.resumes.map((r) => ({ value: r.id, label: r.name }))}
+              onChange={resumeState.setActiveId}
+            />
           )}
         </header>
 

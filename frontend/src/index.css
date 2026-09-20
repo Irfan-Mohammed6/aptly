@@ -246,12 +246,16 @@ p {
   margin-top: 4px;
 }
 
-.select-wrap {
+/* Themed dropdown (see components/Select.jsx) */
+
+.select {
+  position: relative;
   display: grid;
   gap: 4px;
+  min-width: 240px;
 }
 
-.select-wrap label {
+.select-label {
   font-size: 12px;
   font-weight: 600;
   color: var(--ink-3);
@@ -259,16 +263,82 @@ p {
   text-transform: uppercase;
 }
 
-select {
-  appearance: none;
-  min-width: 230px;
-  padding: 9px 36px 9px 12px;
+.select-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 9px 12px;
   border: 1px solid var(--line-strong);
   border-radius: 10px;
-  background: var(--surface)
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%235d564b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E")
-    no-repeat right 12px center;
+  background: var(--surface);
   font-weight: 500;
+  text-align: left;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.select-btn:hover {
+  border-color: var(--ink-3);
+}
+
+.select-btn[aria-expanded="true"] {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.select-value {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.select-chevron {
+  display: inline-flex;
+  color: var(--ink-2);
+  transition: transform 0.15s;
+}
+
+.select-btn[aria-expanded="true"] .select-chevron {
+  transform: rotate(180deg);
+}
+
+.select-list {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  margin: 6px 0 0;
+  padding: 6px;
+  list-style: none;
+  max-height: 280px;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: 0 10px 30px rgba(50, 35, 15, 0.14), 0 2px 6px rgba(50, 35, 15, 0.06);
+}
+
+.select-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.select-option.highlighted {
+  background: var(--surface-2);
+}
+
+.select-option.selected {
+  color: var(--accent);
+  font-weight: 600;
+  background: var(--accent-soft);
 }
 
 /* ---------- Primitives ---------- */
@@ -1018,9 +1088,9 @@ select {
     align-items: stretch;
   }
 
-  .select-wrap,
-  select {
+  .select {
     width: 100%;
+    min-width: 0;
   }
 
   .row {
