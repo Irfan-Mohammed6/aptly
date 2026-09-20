@@ -1,14 +1,13 @@
 {
-  "company": "Ziplabs",
-  "role": "Associate Software Engineer",
-  "text": "Developed a FastAPI microservice on AWS handling 50 concurrent requests with async Python, caching, and retry logic for reliable high-concurrency data delivery.",
+  "company": "",
+  "role": "",
+  "text": "Designed and built end-to-end scalable data infrastructure, ETL pipelines, and AI-powered enrichment systems.",
   "tags": [
-    "FastAPI",
-    "AWS",
-    "async Python",
-    "caching",
-    "retry logic",
-    "high-concurrency data delivery"
+    "scalable data infrastructure",
+    "ETL pipelines",
+    "AI-powered enrichment systems",
+    "end-to-end systems"
   ],
-  "id": "exp_016"
+  "id": "exp_016",
+  "resume_id": "irfan-resume-sept-2026"
 }

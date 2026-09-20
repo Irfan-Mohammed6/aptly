@@ -79,7 +79,9 @@ class RequirementMatch(BaseModel):
     evidence: str | None
 
 
-def match_requirements(requirements: list[ExtractedRequirement]) -> list[RequirementMatch]:
+def match_requirements(
+    requirements: list[ExtractedRequirement], resume_id: str | None = None
+) -> list[RequirementMatch]:
     """Match each extracted job requirement against the candidate's resume chunks.
 
     For every requirement, this queries the `resume_chunks` Chroma
@@ -109,6 +111,9 @@ def match_requirements(requirements: list[ExtractedRequirement]) -> list[Require
         requirements: The requirements to match, typically the
             `requirements` field of an `aptly.llm.schemas.ExtractedRequirements`
             returned by an extraction LLM call.
+        resume_id: If given, only that resume's chunks are searched — this is
+            how an analysis runs against one chosen resume out of several.
+            `None` searches every resume's chunks together.
 
     Returns:
         A list of `RequirementMatch`, one per input requirement, in the same
@@ -116,9 +121,12 @@ def match_requirements(requirements: list[ExtractedRequirement]) -> list[Require
     """
     chroma_store = store.get_store()
     matches: list[RequirementMatch] = []
+    where = {"resume_id": resume_id} if resume_id else None
 
     for requirement in requirements:
-        hits = chroma_store.query(config.RESUME_COLLECTION, requirement.detail, k=config.TOP_K)
+        hits = chroma_store.query(
+            config.RESUME_COLLECTION, requirement.detail, k=config.TOP_K, where=where
+        )
 
         if not hits:
             matches.append(

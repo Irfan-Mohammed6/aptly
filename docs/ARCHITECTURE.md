@@ -190,6 +190,33 @@ A single LLM call over a whole resume is simpler than per-bullet calls, but push
 
 ---
 
+## 5c. Multiple resumes
+
+Several resumes can coexist, and each analysis runs against one of them.
+
+- **Data model:** every chunk file carries a `resume_id`. A small registry,
+  `data/resumes.json` (`config.RESUMES_REGISTRY_PATH`), gives each id a display name,
+  source filename, and timestamps. Like the chunk files it's a source of truth on
+  disk — the Chroma index is derived from both.
+- **Retrieval:** each Chroma document's metadata includes `resume_id`, and
+  `match_requirements(requirements, resume_id)` passes a `where={"resume_id": ...}`
+  filter to the query, so an analysis only ever sees the chosen resume's chunks.
+  `resume_id=None` searches all resumes together.
+- **Lifecycle** (`aptly/ingestion/resumes.py`): each `/upload-resume` creates a *new*
+  resume (registered only after extraction succeeds, so a failed upload leaves no empty
+  entry). Rename changes only the display name — the id, and so every chunk's link to
+  it, is stable. Delete removes the registry entry, the chunk files, and the resume's
+  Chroma documents (`ChromaStore.delete_where`).
+- **Migration:** chunk files with no `resume_id` are grouped under
+  `config.DEFAULT_RESUME_ID`, and the registry entry is created automatically the
+  first time `list_resumes()` runs — an existing single-resume setup needs no manual
+  step, apart from one `scripts/reindex.py` so the index records `resume_id`.
+- **Which resume is "in use"** is a UI concern, not server state: the frontend keeps it
+  in `localStorage` and sends `resume_id` with each `/analyze-jd` request. The backend
+  stays stateless.
+
+---
+
 ## 6. Config (`config.py`)
 
 Single place for every tunable, no magic numbers scattered in logic files:

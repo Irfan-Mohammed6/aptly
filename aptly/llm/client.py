@@ -184,3 +184,51 @@ def call(prompt: str, schema: type[BaseModel]) -> BaseModel:
             raise LLMOutputError(
                 f"Model output failed validation twice. Last raw output: {raw_retry!r}"
             ) from second_error
+
+
+def chat(messages: list[dict]) -> str:
+    """Send a free-form conversation to the local LLM and return its plain-text reply.
+
+    Unlike `call`, this does not request JSON output or validate against a
+    schema — it exists so the frontend's "Model Chat" tab can talk to the
+    same model the rest of Aptly uses, purely to sanity-check that the model
+    is up and see how it behaves on arbitrary prompts. It uses Ollama's
+    `/api/chat` endpoint (which applies the model's own chat template to the
+    message list) with a moderate sampling temperature, since open-ended
+    conversation, unlike structured extraction, benefits from some variety.
+
+    The same `num_ctx`, `num_predict`, and timeout limits as `call` apply,
+    so a single reply is capped at `config.OLLAMA_NUM_PREDICT` tokens and a
+    runaway generation can't hang the request indefinitely.
+
+    Args:
+        messages: The conversation so far, oldest first, as dicts with
+            `role` ("system", "user", or "assistant") and `content` keys.
+
+    Returns:
+        The model's reply text, whitespace-stripped.
+
+    Raises:
+        requests.HTTPError: If Ollama returns a non-2xx response (e.g. the
+            model hasn't been pulled).
+        requests.ConnectionError: If the Ollama server isn't reachable at
+            `config.OLLAMA_HOST`.
+        requests.Timeout: If the reply takes longer than
+            `config.OLLAMA_TIMEOUT_SECONDS`.
+    """
+    response = requests.post(
+        f"{config.OLLAMA_HOST}/api/chat",
+        json={
+            "model": config.OLLAMA_MODEL,
+            "messages": messages,
+            "stream": False,
+            "options": {
+                "temperature": 0.7,
+                "num_ctx": config.OLLAMA_NUM_CTX,
+                "num_predict": config.OLLAMA_NUM_PREDICT,
+            },
+        },
+        timeout=config.OLLAMA_TIMEOUT_SECONDS,
+    )
+    response.raise_for_status()
+    return response.json()["message"]["content"].strip()

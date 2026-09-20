@@ -58,8 +58,8 @@ def _next_chunk_id() -> Iterator[str]:
         next_number += 1
 
 
-def load_resume_chunks() -> list[dict]:
-    """Read every resume chunk JSON file from disk.
+def load_resume_chunks(resume_id: str | None = None) -> list[dict]:
+    """Read resume chunk JSON files from disk, optionally for one resume.
 
     Scans `config.RESUME_CHUNKS_DIR` for `*.json` files (sorted by filename
     for deterministic ordering) and parses each one into a dict. Each dict is
@@ -67,10 +67,16 @@ def load_resume_chunks() -> list[dict]:
     example in docs/ARCHITECTURE.md §5. If a file's JSON body omits an `id`
     field, the filename's stem (e.g. `exp_001` for `exp_001.json`) is used as
     a fallback so every chunk is guaranteed to have a stable identifier.
+    Likewise, a chunk with no `resume_id` (written before multiple resumes
+    were supported) is assigned `config.DEFAULT_RESUME_ID`.
+
+    Args:
+        resume_id: If given, only chunks belonging to that resume are
+            returned. `None` returns every chunk from every resume.
 
     Returns:
         A list of dicts, one per resume chunk file, each guaranteed to have
-        an `id` key. Order matches the sorted filename order on disk.
+        `id` and `resume_id` keys. Order matches the sorted filename order.
 
     Note:
         This function only reads from disk — it does not touch Chroma or the
@@ -81,12 +87,36 @@ def load_resume_chunks() -> list[dict]:
     for file in sorted(config.RESUME_CHUNKS_DIR.glob("*.json")):
         with open(file, "r", encoding="utf-8") as f:
             chunk = json.load(f)
-            chunk.setdefault("id", file.stem)
+        chunk.setdefault("id", file.stem)
+        chunk.setdefault("resume_id", config.DEFAULT_RESUME_ID)
+        if resume_id is None or chunk["resume_id"] == resume_id:
             chunks.append(chunk)
     return chunks
 
 
-def write_resume_chunks(chunks: list[dict]) -> list[Path]:
+def delete_chunks_for_resume(resume_id: str) -> int:
+    """Delete the on-disk chunk files that belong to one resume.
+
+    Does not touch Chroma — the caller removes the matching index entries
+    (see `aptly.ingestion.resumes.delete_resume`, which does both).
+
+    Args:
+        resume_id: The resume whose chunk files should be removed.
+
+    Returns:
+        How many chunk files were deleted.
+    """
+    deleted = 0
+    for file in sorted(config.RESUME_CHUNKS_DIR.glob("*.json")):
+        with open(file, "r", encoding="utf-8") as f:
+            chunk = json.load(f)
+        if chunk.get("resume_id", config.DEFAULT_RESUME_ID) == resume_id:
+            file.unlink()
+            deleted += 1
+    return deleted
+
+
+def write_resume_chunks(chunks: list[dict], resume_id: str = config.DEFAULT_RESUME_ID) -> list[Path]:
     """Write a batch of resume chunks to disk as individual JSON files, file-first.
 
     Used by `aptly.api.routes_resume.upload_resume` to persist the chunks an
@@ -110,6 +140,9 @@ def write_resume_chunks(chunks: list[dict]) -> list[Path]:
             `tags` keys — in practice, the `chunks` field of an
             `aptly.llm.schemas.ExtractedResumeChunks`, converted to plain
             dicts (e.g. via `[c.model_dump() for c in extracted.chunks]`).
+        resume_id: The resume these chunks belong to; stored in each file.
+            Chunk ids stay unique across all resumes (they continue from the
+            highest `exp_NNN` on disk regardless of which resume owns it).
 
     Returns:
         A list of `Path`s to the newly written JSON files, one per input
@@ -121,7 +154,7 @@ def write_resume_chunks(chunks: list[dict]) -> list[Path]:
         chunk_id = next(ids)
         path = config.RESUME_CHUNKS_DIR / f"{chunk_id}.json"
         with open(path, "w", encoding="utf-8") as f:
-            json.dump({**chunk, "id": chunk_id}, f, indent=2)
+            json.dump({**chunk, "id": chunk_id, "resume_id": resume_id}, f, indent=2)
         paths.append(path)
     return paths
 
@@ -162,6 +195,7 @@ def ingest_resume_chunks(chunks: list[dict]) -> None:
                 "company": chunk.get("company", ""),
                 "role": chunk.get("role", ""),
                 "tags": ", ".join(chunk.get("tags", [])),
+                "resume_id": chunk.get("resume_id", config.DEFAULT_RESUME_ID),
             }
             for chunk in chunks
         ],

@@ -30,15 +30,37 @@ Chroma collections populated via `python scripts/reindex.py` beforehand
 collections).
 """
 
+import threading
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from aptly import config
-from aptly.api import routes_jd, routes_notes, routes_resume
+from aptly.api import routes_chat, routes_jd, routes_notes, routes_resume
+from aptly.retrieval.store import get_store
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    """Warm up the vector store in the background when the server starts.
+
+    Creating the `ChromaStore` loads the embedding model, which takes several
+    seconds. Done lazily on the first request that needs it, that cost lands
+    on whatever the user happened to click first (in practice: deleting or
+    re-indexing a resume, which felt frozen). Doing it here, on a background
+    thread, means the server is up immediately and the model is usually
+    ready by the time anyone clicks anything; a request that does arrive
+    early simply waits for the load already in progress (see the lock in
+    `ChromaStore.__new__`) instead of starting its own.
+    """
+    threading.Thread(target=get_store, name="store-warmup", daemon=True).start()
+    yield
+
 
 #: The ASGI application object. `uvicorn aptly.api.main:app` looks up this
 #: exact name — renaming it requires updating the uvicorn invocation to match.
-app = FastAPI(title="Aptly — AI Job Search Co-Pilot")
+app = FastAPI(title="Aptly — AI Job Search Co-Pilot", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -50,3 +72,4 @@ app.add_middleware(
 app.include_router(routes_jd.router)
 app.include_router(routes_notes.router)
 app.include_router(routes_resume.router)
+app.include_router(routes_chat.router)

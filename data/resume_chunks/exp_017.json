@@ -1,14 +1,14 @@
 {
-  "company": "Ziplabs",
-  "role": "Associate Software Engineer",
-  "text": "Conducted multi-model LLM evaluation across cost, latency, accuracy, and output consistency, comparing open source models to select the optimal model per pipeline stage.",
+  "company": "",
+  "role": "",
+  "text": "Built end-to-end web scraping and data extraction pipelines using Python and Node.js.",
   "tags": [
-    "multi-model LLM evaluation",
-    "cost",
-    "latency",
-    "accuracy",
-    "output consistency",
-    "open source models"
+    "web scraping",
+    "data extraction",
+    "Python",
+    "Node.js",
+    "end-to-end pipelines"
   ],
-  "id": "exp_017"
+  "id": "exp_017",
+  "resume_id": "irfan-resume-sept-2026"
 }

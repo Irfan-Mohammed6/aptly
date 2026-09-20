@@ -82,7 +82,8 @@ aptly/
 │   │   ├── main.py                  # wiring + CORS
 │   │   ├── routes_jd.py
 │   │   ├── routes_notes.py
-│   │   ├── routes_resume.py         # POST /upload-resume
+│   │   ├── routes_resume.py         # POST /upload-resume, GET/PATCH/DELETE /resumes
+│   │   ├── routes_chat.py           # POST /chat
 │   │   └── models.py
 │   └── eval/
 │       └── retrieval_eval.py      # recall@k against hand-labeled fixtures
@@ -258,30 +259,65 @@ four endpoints, use `curl` as shown below, or run the [frontend](#frontend) for 
 
 ### `POST /upload-resume`
 
-Upload a PDF resume and automatically populate `data/resume_chunks/` from it — an
-alternative to hand-writing the JSON files described in
-[Resume chunks](#resume-chunks). Extracts the PDF's text, asks the LLM to split it
-into per-bullet chunks, writes them to disk, and re-indexes.
+Upload a PDF resume as a **new, separately named resume** and populate
+`data/resume_chunks/` from it — an alternative to hand-writing the JSON files
+described in [Resume chunks](#resume-chunks). Extracts the PDF's text, asks the LLM
+to split it into per-bullet chunks, writes them to disk (tagged with the new
+resume's id), and re-indexes. Existing resumes are left untouched.
 
 ```bash
-curl -X POST http://localhost:8000/upload-resume -F "file=@/path/to/your/resume.pdf"
+curl -X POST http://localhost:8000/upload-resume \
+  -F "file=@/path/to/your/resume.pdf" -F "name=Backend & Data"
 ```
 
 ```json
-{ "chunks_created": 12 }
+{ "chunks_created": 12, "resume_id": "backend-data", "name": "Backend & Data" }
 ```
 
-This can take several minutes on CPU-only inference — a whole resume is a larger
-extraction task than a single job description.
+`name` is optional and defaults to the file's name. This can take several minutes on
+CPU-only inference — a whole resume is a larger extraction task than a single job
+description.
+
+### Managing resumes
+
+You can keep several resumes and choose which one an analysis runs against.
+
+| Endpoint | What it does |
+|---|---|
+| `GET /resumes` | List every resume: `id`, `name`, `filename`, `chunk_count`, timestamps. |
+| `GET /resumes/{id}/chunks` | The chunks extracted from one resume (what analyses match against). |
+| `PATCH /resumes/{id}` | Rename: body `{"name": "..."}`. The id, and so its chunks' link to it, doesn't change. |
+| `DELETE /resumes/{id}` | Delete a resume, its chunk files, and its index entries. |
+
+Resumes are tracked in `data/resumes.json`. Chunk files written before multiple
+resumes existed (no `resume_id`) are grouped automatically into a resume with id
+`default`, so an existing setup keeps working with no migration step. After pulling
+this feature onto an existing checkout, run `python scripts/reindex.py` once so the
+Chroma index records each chunk's resume.
+
+### `GET /notes`
+
+List every concept note (`id`, `title`, `tags`, `body`), read straight from
+`data/concept_notes/`.
+
+### `POST /chat`
+
+Plain chat with the local model — `{"messages": [{"role": "user", "content": "..."}]}` →
+`{"reply": "...", "model": "llama3.2:3b"}`. Not part of the analysis pipeline; it's a
+quick way to check the model is running. The server is stateless (send the history
+each time) and only forwards the last 12 messages.
 
 ### `POST /analyze-jd`
 
-Score how well your resume matches a job description, with evidenced strengths and gaps.
+Score how well a resume matches a job description, with evidenced strengths and gaps.
+`resume_id` (optional, an id from `GET /resumes`) picks which resume to analyze
+against; omit it to match against every resume's chunks together. An unknown
+`resume_id` returns 404 immediately, before any slow LLM work.
 
 ```bash
 curl -X POST http://localhost:8000/analyze-jd \
   -H "Content-Type: application/json" \
-  -d '{"jd_text": "We are hiring a Backend Engineer. Requirements: 3+ years building ETL pipelines in Python, experience deploying containerized REST APIs on AWS, and hands-on experience with Kubernetes in production."}'
+  -d '{"jd_text": "We are hiring a Backend Engineer. Requirements: 3+ years building ETL pipelines in Python, experience deploying containerized REST APIs on AWS, and hands-on experience with Kubernetes in production.", "resume_id": "default"}'
 ```
 
 ```json
@@ -349,8 +385,17 @@ expected — it's the tradeoff for zero API cost and full offline operation.
 
 ## Frontend
 
-A React (Vite) UI lives in `frontend/`, covering all four endpoints (analyze a JD,
-upload a resume, add a note) as tabs.
+A React (Vite) UI lives in `frontend/` with four screens:
+
+- **Analyze a job** — paste a job description, pick which resume to run it against,
+  and see a fit score with evidenced strengths, gaps, and relevant prep notes.
+- **Resumes** — keep several resumes side by side: upload PDFs, rename and delete
+  them, preview the chunks extracted from each, and choose which one is "in use".
+- **Prep notes** — write new notes and browse the ones you have.
+- **Model chat** — talk to the local model directly to check it's running, with a
+  live "Thinking" indicator while a reply generates.
+
+The resume you're using is remembered across reloads (browser `localStorage`).
 
 **Live deployment:** https://aptly-job-assistant.netlify.app (frontend only — it needs
 the backend and Ollama running locally, see below).

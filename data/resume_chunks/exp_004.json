@@ -1,0 +1,15 @@
+{
+  "company": "Scaler",
+  "role": "Software Engineer \u2013 AI & Data",
+  "text": "Developed a FastAPI microservice on AWS handling 50 concurrent requests with async Python, caching, and retry logic for reliable high-concurrency data delivery.",
+  "tags": [
+    "FastAPI",
+    "AWS",
+    "async Python",
+    "caching",
+    "retry logic",
+    "high-concurrency data delivery"
+  ],
+  "id": "exp_004",
+  "resume_id": "irfan-resume-sept-2026"
+}

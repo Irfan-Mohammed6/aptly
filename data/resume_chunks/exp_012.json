@@ -1,6 +1,6 @@
 {
-  "company": "MSA Software",
-  "role": "Python Developer",
+  "company": "Scaler",
+  "role": "Software Engineer \u2013 AI & Data",
   "text": "Built end-to-end web scraping and data extraction pipelines using Python and Node.js, processing data from diverse sources including websites, PDFs, and emails.",
   "tags": [
     "web scraping",
@@ -12,5 +12,6 @@
     "PDFs",
     "emails"
   ],
-  "id": "exp_024"
+  "id": "exp_012",
+  "resume_id": "irfan-resume-sept-2026"
 }

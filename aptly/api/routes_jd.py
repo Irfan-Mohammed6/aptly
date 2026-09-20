@@ -18,10 +18,11 @@ with `uvicorn aptly.api.main:app --reload` (see aptly/api/main.py), then:
       -d '{"jd_text": "Looking for a backend engineer with 3+ years of Python and AWS experience..."}'
 """
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from fastapi.concurrency import run_in_threadpool
 
 from aptly.api.models import AnalyzeJDRequest, AnalyzeJDResponse
+from aptly.ingestion.resumes import get_resume
 from aptly.llm.client import call as llm_call
 from aptly.llm.prompts import extract_requirements_prompt
 from aptly.llm.schemas import ExtractedRequirements
@@ -64,16 +65,23 @@ async def analyze_jd(request: AnalyzeJDRequest) -> AnalyzeJDResponse:
         "partial") and `gaps` (verdict "gap").
 
     Raises:
+        HTTPException: 404 if `request.resume_id` names a resume that
+            doesn't exist — checked up front, before any slow LLM work, and
+            worth failing loudly: matching against a nonexistent resume
+            would otherwise report every requirement as a gap.
         aptly.llm.client.LLMOutputError: Propagates up (FastAPI will turn
             an unhandled exception into a 500 response) if the LLM's output
             fails schema validation twice in a row during either the
             requirement-extraction call or a borderline-case judgment call
             inside `match_requirements`.
     """
+    if request.resume_id and await run_in_threadpool(get_resume, request.resume_id) is None:
+        raise HTTPException(status_code=404, detail="Resume not found.")
+
     extracted = await run_in_threadpool(
         llm_call, extract_requirements_prompt(request.jd_text), ExtractedRequirements
     )
-    matches = await run_in_threadpool(match_requirements, extracted.requirements)
+    matches = await run_in_threadpool(match_requirements, extracted.requirements, request.resume_id)
     fit_score = compute_fit_score(matches)
 
     return AnalyzeJDResponse(

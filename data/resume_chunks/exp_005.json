@@ -1,0 +1,15 @@
+{
+  "company": "Scaler",
+  "role": "Software Engineer \u2013 AI & Data",
+  "text": "Conducted multi-model LLM evaluation across cost, latency, accuracy, and output consistency, comparing open source models to select the optimal model per pipeline stage.",
+  "tags": [
+    "multi-model LLM evaluation",
+    "cost",
+    "latency",
+    "accuracy",
+    "output consistency",
+    "open source models"
+  ],
+  "id": "exp_005",
+  "resume_id": "irfan-resume-sept-2026"
+}

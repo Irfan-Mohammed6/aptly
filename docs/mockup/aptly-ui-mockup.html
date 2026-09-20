@@ -1,0 +1,688 @@
+<!--
+=============================================================================
+Aptly — AI Job Search Co-Pilot
+Author: Irfan Mohammed
+License: MIT — see LICENSE file in the project root.
+=============================================================================
+UI redesign mockup. Static HTML for design review only — not wired to the
+backend, and not part of the shipped frontend/. Open it directly in a browser.
+Sample data mirrors a real /analyze-jd result.
+-->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Aptly — UI mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f6f3ec;
+  --surface: #ffffff;
+  --surface-2: #faf8f3;
+  --ink: #1f1b16;
+  --ink-2: #5d564b;
+  --ink-3: #766d5f;
+  --line: #e6dfd0;
+  --line-strong: #d6cdb9;
+  --accent: #b4532a;
+  --accent-ink: #ffffff;
+  --accent-soft: #f6e3d8;
+  --good: #2d6a4f;
+  --good-soft: #e3f0e8;
+  --warn: #8a5d0f;
+  --warn-soft: #f8ecd0;
+  --bad: #a63d3d;
+  --bad-soft: #f7e1e0;
+  --radius: 14px;
+  --shadow: 0 1px 2px rgba(50, 35, 15, .05), 0 6px 20px rgba(50, 35, 15, .05);
+  --font-ui: "DM Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "Fraunces", Georgia, "Times New Roman", serif;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+h1, h2, h3, p { margin: 0; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+[hidden] { display: none !important; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* ---------- Shell ---------- */
+.app {
+  display: grid;
+  grid-template-columns: 248px minmax(0, 1fr);
+  min-height: 100vh;
+}
+.side {
+  position: sticky; top: 0; height: 100vh;
+  display: flex; flex-direction: column; gap: 28px;
+  padding: 24px 16px;
+  background: var(--surface);
+  border-right: 1px solid var(--line);
+}
+.brand { display: flex; align-items: center; gap: 12px; padding: 0 8px; }
+.brand-mark {
+  width: 36px; height: 36px; border-radius: 10px;
+  display: grid; place-items: center;
+  background: var(--ink); color: var(--bg);
+  font-family: var(--font-display); font-size: 20px; font-weight: 600;
+}
+.brand-name { font-family: var(--font-display); font-size: 20px; font-weight: 600; letter-spacing: -.01em; line-height: 1.1; }
+.brand-sub { font-size: 12px; color: var(--ink-3); }
+
+.nav { display: flex; flex-direction: column; gap: 2px; }
+.nav-btn {
+  display: flex; align-items: center; gap: 12px;
+  width: 100%; padding: 10px 12px;
+  border: 0; border-radius: 10px; background: none;
+  color: var(--ink-2); font-weight: 500; text-align: left;
+  transition: background .15s, color .15s;
+}
+.nav-btn:hover { background: var(--surface-2); color: var(--ink); }
+.nav-btn[aria-current="page"] { background: var(--accent-soft); color: var(--accent); }
+.nav-btn svg { flex: none; }
+.nav-label { font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); padding: 0 12px 6px; }
+
+.side-foot { margin-top: auto; display: grid; gap: 10px; padding: 0 8px; font-size: 13px; color: var(--ink-2); }
+.status { display: flex; align-items: center; gap: 8px; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--good); box-shadow: 0 0 0 3px var(--good-soft); }
+
+.main { min-width: 0; padding: 28px 40px 48px; max-width: 1360px; width: 100%; }
+.topbar { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; flex-wrap: wrap; margin-bottom: 24px; }
+.page-title { font-family: var(--font-display); font-size: 32px; font-weight: 600; letter-spacing: -.02em; line-height: 1.15; }
+.page-sub { color: var(--ink-2); margin-top: 4px; }
+.top-actions { display: flex; align-items: center; gap: 12px; }
+
+.select-wrap { display: grid; gap: 4px; }
+.select-wrap label { font-size: 12px; font-weight: 600; color: var(--ink-3); letter-spacing: .04em; text-transform: uppercase; }
+select {
+  appearance: none; min-width: 230px;
+  padding: 9px 36px 9px 12px;
+  border: 1px solid var(--line-strong); border-radius: 10px;
+  background: var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%235d564b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E") no-repeat right 12px center;
+  font-weight: 500;
+}
+
+.view { display: none; }
+.view.active { display: block; }
+
+/* ---------- Primitives ---------- */
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
+.card-pad { padding: 24px; }
+.card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+.card h2 { font-size: 17px; font-weight: 600; letter-spacing: -.005em; }
+.muted { color: var(--ink-2); }
+.meta { color: var(--ink-3); font-size: 13px; }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 10px 18px; border-radius: 10px; border: 1px solid transparent;
+  font-weight: 600; transition: background .15s, transform .05s;
+}
+.btn:active { transform: translateY(1px); }
+.btn-primary { background: var(--accent); color: var(--accent-ink); }
+.btn-primary:hover { background: #9d4622; }
+.btn-ghost { background: none; border-color: var(--line-strong); color: var(--ink); }
+.btn-ghost:hover { background: var(--surface-2); }
+.btn-quiet { background: none; color: var(--accent); padding: 6px 8px; }
+.btn-quiet:hover { background: var(--accent-soft); }
+.btn-danger { color: var(--bad); }
+.btn-danger:hover { background: var(--bad-soft); }
+
+.field { display: grid; gap: 6px; }
+.field > label { font-size: 13px; font-weight: 600; color: var(--ink-2); }
+.input, .textarea {
+  width: 100%; padding: 11px 13px;
+  border: 1px solid var(--line-strong); border-radius: 10px;
+  background: var(--surface); line-height: 1.5;
+}
+.textarea { resize: vertical; }
+.input::placeholder, .textarea::placeholder { color: var(--ink-3); }
+
+.badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 2px 10px; border-radius: 999px;
+  font-size: 12px; font-weight: 600; white-space: nowrap;
+}
+.badge-good { background: var(--good-soft); color: var(--good); }
+.badge-warn { background: var(--warn-soft); color: var(--warn); }
+.badge-bad { background: var(--bad-soft); color: var(--bad); }
+.badge-neutral { background: var(--surface-2); color: var(--ink-2); box-shadow: inset 0 0 0 1px var(--line); }
+.badge-accent { background: var(--accent-soft); color: var(--accent); }
+
+.seg { display: inline-flex; padding: 3px; border-radius: 10px; background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--line); }
+.seg button { border: 0; background: none; padding: 6px 14px; border-radius: 8px; font-weight: 600; font-size: 14px; color: var(--ink-2); }
+.seg button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgba(50,35,15,.12); }
+
+/* ---------- Analyze ---------- */
+.workspace { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 24px; align-items: start; }
+.jd-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 16px; flex-wrap: wrap; }
+.helper { font-size: 13px; color: var(--ink-3); margin-top: 10px; }
+.link-row { display: flex; gap: 8px; }
+.link-row .input { flex: 1; min-width: 0; }
+
+.result-top { display: flex; align-items: center; gap: 24px; padding-bottom: 20px; border-bottom: 1px solid var(--line); margin-bottom: 4px; }
+.ring { position: relative; width: 116px; height: 116px; flex: none; }
+.ring svg { transform: rotate(-90deg); }
+.ring-num { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; }
+.ring-num strong { font-family: var(--font-display); font-size: 34px; font-weight: 600; line-height: 1; letter-spacing: -.02em; }
+.ring-num span { font-size: 12px; color: var(--ink-3); }
+.result-summary h2 { font-family: var(--font-display); font-size: 22px; font-weight: 600; letter-spacing: -.01em; }
+.result-summary p { margin-top: 4px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+
+.group { padding-top: 20px; }
+.group-title { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+.group-title h3 { font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-2); }
+.count { font-size: 12px; font-weight: 600; padding: 1px 8px; border-radius: 999px; background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--line); color: var(--ink-2); }
+
+.rows { list-style: none; margin: 0; padding: 0; }
+.row { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--line); }
+.row:last-child { border-bottom: 0; }
+.row-icon { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; }
+.row-icon.good { background: var(--good-soft); color: var(--good); }
+.row-icon.bad { background: var(--bad-soft); color: var(--bad); }
+.row-icon.warn { background: var(--warn-soft); color: var(--warn); }
+.row-title { font-weight: 500; }
+.row-evidence { margin-top: 6px; padding: 8px 12px; border-radius: 8px; background: var(--surface-2); color: var(--ink-2); font-size: 13.5px; }
+.row-meta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; align-items: center; }
+.sim { font-size: 12px; font-weight: 600; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+
+.note-item { padding: 12px 0; border-bottom: 1px solid var(--line); }
+.note-item:last-child { border-bottom: 0; }
+.note-item strong { font-weight: 600; }
+.note-item p { color: var(--ink-2); font-size: 13.5px; margin-top: 2px; }
+
+/* ---------- Resumes ---------- */
+.two-col { display: grid; grid-template-columns: minmax(0, 6fr) minmax(0, 5fr); gap: 24px; align-items: start; }
+.resume-list { display: grid; gap: 12px; }
+.resume { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 16px; align-items: center; padding: 18px 20px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.resume[data-active="true"] { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.resume input[type="radio"] { width: 18px; height: 18px; accent-color: var(--accent); }
+.resume-name { font-weight: 600; }
+.resume-actions { display: flex; gap: 2px; }
+.drop {
+  display: grid; place-items: center; text-align: center; gap: 6px;
+  padding: 28px 20px; margin-top: 16px;
+  border: 1.5px dashed var(--line-strong); border-radius: 12px; background: var(--surface-2);
+  color: var(--ink-2);
+}
+.chunk { padding: 12px 0; border-bottom: 1px solid var(--line); font-size: 14px; }
+.chunk:last-child { border-bottom: 0; }
+.chunk-top { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 4px; }
+
+/* ---------- Notes ---------- */
+.tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+
+/* ---------- Chat ---------- */
+.chat-card { display: flex; flex-direction: column; height: calc(100vh - 150px); min-height: 480px; max-width: 900px; }
+.chat-log { flex: 1; overflow-y: auto; scrollbar-width: none; display: flex; flex-direction: column; gap: 14px; padding: 4px 2px 16px; }
+.chat-log::-webkit-scrollbar { display: none; }
+.msg { max-width: 82%; padding: 12px 16px; border-radius: 16px; white-space: pre-wrap; }
+.msg.user { align-self: flex-end; background: var(--ink); color: var(--bg); border-bottom-right-radius: 5px; }
+.msg.bot { align-self: flex-start; background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--line); border-bottom-left-radius: 5px; }
+.composer { display: flex; gap: 10px; align-items: flex-end; padding-top: 16px; border-top: 1px solid var(--line); }
+.composer .textarea { min-height: 46px; max-height: 140px; resize: none; }
+
+.thinking { display: inline-flex; align-items: center; gap: 10px; color: var(--ink-2); }
+.spark { color: var(--accent); animation: pulse 1.5s ease-in-out infinite; display: inline-flex; }
+.shimmer {
+  font-weight: 600;
+  background: linear-gradient(90deg, var(--ink-3) 0%, var(--ink) 45%, var(--ink-3) 90%);
+  background-size: 200% 100%;
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  animation: shimmer 1.6s linear infinite;
+}
+.thinking .t { font-size: 13px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+@keyframes pulse { 0%, 100% { transform: scale(.8) rotate(0); opacity: .55; } 50% { transform: scale(1.15) rotate(90deg); opacity: 1; } }
+@keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+@media (prefers-reduced-motion: reduce) { .spark, .shimmer { animation: none; } }
+
+.empty { display: grid; place-items: center; text-align: center; gap: 6px; padding: 56px 16px; color: var(--ink-2); }
+.empty .ic { width: 52px; height: 52px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; margin-bottom: 6px; }
+
+/* ---------- Mobile ---------- */
+.bottom-nav { display: none; }
+@media (max-width: 960px) {
+  .app { grid-template-columns: minmax(0, 1fr); }
+  .side { display: none; }
+  .main { padding: 20px 16px 96px; }
+  .page-title { font-size: 26px; }
+  .workspace, .two-col { grid-template-columns: minmax(0, 1fr); }
+  .card-pad { padding: 18px; }
+  .result-top { flex-direction: column; align-items: flex-start; gap: 16px; }
+  .topbar { align-items: stretch; }
+  .select-wrap, select { width: 100%; }
+  .row { grid-template-columns: 28px minmax(0, 1fr); }
+  .row > .badge-slot { grid-column: 2; }
+  .resume { grid-template-columns: auto minmax(0, 1fr); }
+  .resume-actions { grid-column: 2; }
+  .chat-card { height: calc(100vh - 210px); }
+  .msg { max-width: 92%; }
+  .bottom-nav {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    background: var(--surface); border-top: 1px solid var(--line);
+    padding: 6px 6px calc(6px + env(safe-area-inset-bottom));
+  }
+  .bottom-nav button {
+    display: grid; justify-items: center; gap: 2px; padding: 8px 4px;
+    border: 0; background: none; border-radius: 10px;
+    font-size: 11px; font-weight: 600; color: var(--ink-3);
+  }
+  .bottom-nav button[aria-current="page"] { color: var(--accent); background: var(--accent-soft); }
+}
+</style>
+</head>
+<body>
+
+<!-- SVG icon sprite -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-analyze" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h4"/></symbol>
+  <symbol id="i-resume" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c.9-3.8 3.7-6 7-6s6.1 2.2 7 6"/></symbol>
+  <symbol id="i-note" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h11a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H6z"/><path d="M9 8h6M9 12h6M9 16h3"/></symbol>
+  <symbol id="i-chat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H10l-5 4v-4H4z"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+  <symbol id="i-spark" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.2 7.8L22 12l-7.8 2.2L12 22l-2.2-7.8L2 12l7.8-2.2z"/></symbol>
+  <symbol id="i-upload" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></symbol>
+  <symbol id="i-link" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></symbol>
+  <symbol id="i-send" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+</svg>
+
+<div class="app">
+
+  <!-- ===== Sidebar (desktop) ===== -->
+  <aside class="side">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">A</div>
+      <div>
+        <div class="brand-name">Aptly</div>
+        <div class="brand-sub">Job search co-pilot</div>
+      </div>
+    </div>
+
+    <nav aria-label="Main">
+      <div class="nav-label">Workspace</div>
+      <div class="nav">
+        <button class="nav-btn" data-view="analyze" aria-current="page"><svg width="20" height="20"><use href="#i-analyze"/></svg>Analyze a job</button>
+        <button class="nav-btn" data-view="resumes"><svg width="20" height="20"><use href="#i-resume"/></svg>Resumes</button>
+        <button class="nav-btn" data-view="notes"><svg width="20" height="20"><use href="#i-note"/></svg>Prep notes</button>
+        <button class="nav-btn" data-view="chat"><svg width="20" height="20"><use href="#i-chat"/></svg>Model chat</button>
+      </div>
+    </nav>
+
+    <div class="side-foot">
+      <div class="status"><span class="dot"></span>Backend connected</div>
+      <div class="meta">Model: llama3.2:3b &middot; runs locally, no API keys</div>
+    </div>
+  </aside>
+
+  <!-- ===== Main ===== -->
+  <div class="main">
+    <header class="topbar">
+      <div>
+        <h1 class="page-title" id="page-title">Analyze a job</h1>
+        <p class="page-sub" id="page-sub">See how your resume stacks up against a job description, requirement by requirement.</p>
+      </div>
+      <div class="top-actions" id="resume-picker">
+        <div class="select-wrap">
+          <label for="resume-select">Analyze with</label>
+          <select id="resume-select">
+            <option>Backend &amp; Data</option>
+            <option>AI Engineer</option>
+            <option>General</option>
+          </select>
+        </div>
+      </div>
+    </header>
+
+    <main>
+
+      <!-- ============ ANALYZE ============ -->
+      <section class="view active" id="view-analyze" aria-label="Analyze a job">
+        <div class="workspace">
+
+          <div class="card card-pad">
+            <div class="card-head">
+              <h2>Job description</h2>
+              <div class="seg" role="group" aria-label="Input method">
+                <button type="button" aria-pressed="true" data-mode="paste">Paste text</button>
+                <button type="button" aria-pressed="false" data-mode="link">From link</button>
+              </div>
+            </div>
+
+            <div id="mode-paste">
+              <div class="field">
+                <label for="jd" class="sr">Job description text</label>
+                <textarea class="textarea" id="jd" rows="15">We're hiring a Software Engineer - AI & Data to help scale our backend and ML data pipelines.
+
+Requirements:
+- Strong Python experience building ETL and data pipelines at scale
+- Experience integrating LLMs (open-source or hosted) into production workflows
+- Experience building and deploying backend APIs (FastAPI or similar) on AWS
+- Experience with prompt engineering and evaluating multiple LLMs for cost/latency/accuracy tradeoffs
+- Hands-on experience with Kubernetes for container orchestration in production
+- Experience with Terraform or other infrastructure-as-code tools
+- Familiarity with Golang is a plus</textarea>
+              </div>
+            </div>
+
+            <div id="mode-link" hidden>
+              <div class="field">
+                <label for="jd-url">Job posting URL</label>
+                <div class="link-row">
+                  <input class="input" id="jd-url" type="url" placeholder="https://company.com/careers/backend-engineer">
+                  <button class="btn btn-ghost" type="button"><svg width="18" height="18"><use href="#i-link"/></svg>Fetch</button>
+                </div>
+              </div>
+              <p class="helper">Works with most public job pages and career sites. LinkedIn postings need to be pasted as text.</p>
+            </div>
+
+            <div class="jd-foot">
+              <span class="meta">96 words</span>
+              <div style="display:flex;gap:8px">
+                <button class="btn btn-ghost" type="button">Clear</button>
+                <button class="btn btn-primary" type="button"><svg width="18" height="18"><use href="#i-spark"/></svg>Analyze</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="card card-pad" aria-live="polite">
+            <div class="result-top">
+              <div class="ring" role="img" aria-label="Fit score 57 out of 100">
+                <svg width="116" height="116" viewBox="0 0 116 116" aria-hidden="true">
+                  <circle cx="58" cy="58" r="52" fill="none" stroke="#efe8d9" stroke-width="10"/>
+                  <circle cx="58" cy="58" r="52" fill="none" stroke="#b4532a" stroke-width="10" stroke-linecap="round" stroke-dasharray="326.7" stroke-dashoffset="140.5"/>
+                </svg>
+                <div class="ring-num"><strong>57</strong><span>out of 100</span></div>
+              </div>
+              <div class="result-summary">
+                <h2>A solid fit with a few gaps</h2>
+                <p class="muted">4 of 7 requirements matched. Kubernetes, Terraform and Golang aren't covered by this resume.</p>
+                <div class="chips">
+                  <span class="badge badge-accent">Backend &amp; Data</span>
+                  <span class="badge badge-neutral">7 requirements</span>
+                  <span class="badge badge-neutral">Analyzed in 108s</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="group">
+              <div class="group-title"><h3>Strengths</h3><span class="count">4</span></div>
+              <ul class="rows">
+                <li class="row">
+                  <span class="row-icon good"><svg width="15" height="15"><use href="#i-check"/></svg></span>
+                  <div>
+                    <div class="row-title">Strong Python experience building ETL and data pipelines at scale</div>
+                    <div class="row-evidence">Processing and upserting up to 25,000 records per minute into MongoDB</div>
+                  </div>
+                  <span class="badge-slot"><span class="badge badge-good">Match <span class="sim">0.70</span></span></span>
+                </li>
+                <li class="row">
+                  <span class="row-icon good"><svg width="15" height="15"><use href="#i-check"/></svg></span>
+                  <div>
+                    <div class="row-title">Experience integrating LLMs into production workflows</div>
+                    <div class="row-evidence">Built LLM-powered validation workflows using open-source models, 97% accuracy</div>
+                  </div>
+                  <span class="badge-slot"><span class="badge badge-good">Match <span class="sim">0.62</span></span></span>
+                </li>
+                <li class="row">
+                  <span class="row-icon good"><svg width="15" height="15"><use href="#i-check"/></svg></span>
+                  <div>
+                    <div class="row-title">Backend APIs (FastAPI or similar) on AWS</div>
+                    <div class="row-evidence">FastAPI microservice on AWS handling 50 concurrent requests with async Python</div>
+                  </div>
+                  <span class="badge-slot"><span class="badge badge-good">Match <span class="sim">0.49</span></span></span>
+                </li>
+                <li class="row">
+                  <span class="row-icon good"><svg width="15" height="15"><use href="#i-check"/></svg></span>
+                  <div>
+                    <div class="row-title">Prompt engineering and evaluating multiple LLMs</div>
+                    <div class="row-evidence">Multi-model LLM evaluation across cost, latency, accuracy and output consistency</div>
+                  </div>
+                  <span class="badge-slot"><span class="badge badge-good">Match <span class="sim">0.58</span></span></span>
+                </li>
+              </ul>
+            </div>
+
+            <div class="group">
+              <div class="group-title"><h3>Gaps</h3><span class="count">3</span></div>
+              <ul class="rows">
+                <li class="row">
+                  <span class="row-icon bad"><svg width="15" height="15"><use href="#i-x"/></svg></span>
+                  <div><div class="row-title">Hands-on experience with Kubernetes for container orchestration in production</div></div>
+                  <span class="badge-slot"><span class="badge badge-bad">Gap <span class="sim">0.25</span></span></span>
+                </li>
+                <li class="row">
+                  <span class="row-icon bad"><svg width="15" height="15"><use href="#i-x"/></svg></span>
+                  <div><div class="row-title">Experience with Terraform or other infrastructure-as-code tools</div></div>
+                  <span class="badge-slot"><span class="badge badge-bad">Gap <span class="sim">0.39</span></span></span>
+                </li>
+                <li class="row">
+                  <span class="row-icon bad"><svg width="15" height="15"><use href="#i-x"/></svg></span>
+                  <div><div class="row-title">Familiarity with Golang</div></div>
+                  <span class="badge-slot"><span class="badge badge-bad">Gap <span class="sim">0.26</span></span></span>
+                </li>
+              </ul>
+            </div>
+
+            <div class="group">
+              <div class="group-title"><h3>Prep notes for this role</h3><span class="count">2</span></div>
+              <div>
+                <div class="note-item"><strong>RAG vs Fine-tuning</strong><p>RAG retrieves relevant context at query time and injects it into the prompt&hellip;</p></div>
+                <div class="note-item"><strong>Transformer Self-Attention</strong><p>Self-attention lets each token look at every other token and weigh how relevant&hellip;</p></div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ============ RESUMES ============ -->
+      <section class="view" id="view-resumes" aria-label="Resumes">
+        <div class="two-col">
+          <div class="card card-pad">
+            <div class="card-head">
+              <h2>Your resumes</h2>
+              <button class="btn btn-primary" type="button"><svg width="18" height="18"><use href="#i-upload"/></svg>Upload resume</button>
+            </div>
+
+            <div class="resume-list" role="radiogroup" aria-label="Active resume">
+              <div class="resume" data-active="true">
+                <input type="radio" name="active" id="r1" checked aria-label="Use Backend and Data for analysis">
+                <div>
+                  <div class="resume-name">Backend &amp; Data <span class="badge badge-accent" style="margin-left:6px">In use</span></div>
+                  <div class="meta">Irfan_Resume_Aug2026.pdf &middot; 12 chunks &middot; Updated 12 Sep</div>
+                </div>
+                <div class="resume-actions">
+                  <button class="btn btn-quiet" type="button">View</button>
+                  <button class="btn btn-quiet" type="button">Rename</button>
+                  <button class="btn btn-quiet btn-danger" type="button">Delete</button>
+                </div>
+              </div>
+              <div class="resume" data-active="false">
+                <input type="radio" name="active" id="r2" aria-label="Use AI Engineer for analysis">
+                <div>
+                  <div class="resume-name">AI Engineer</div>
+                  <div class="meta">Irfan_AI_Resume.pdf &middot; 14 chunks &middot; Updated 3 Sep</div>
+                </div>
+                <div class="resume-actions">
+                  <button class="btn btn-quiet" type="button">View</button>
+                  <button class="btn btn-quiet" type="button">Rename</button>
+                  <button class="btn btn-quiet btn-danger" type="button">Delete</button>
+                </div>
+              </div>
+              <div class="resume" data-active="false">
+                <input type="radio" name="active" id="r3" aria-label="Use General for analysis">
+                <div>
+                  <div class="resume-name">General</div>
+                  <div class="meta">Irfan_General.pdf &middot; 9 chunks &middot; Updated 21 Aug</div>
+                </div>
+                <div class="resume-actions">
+                  <button class="btn btn-quiet" type="button">View</button>
+                  <button class="btn btn-quiet" type="button">Rename</button>
+                  <button class="btn btn-quiet btn-danger" type="button">Delete</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="drop">
+              <svg width="26" height="26"><use href="#i-upload"/></svg>
+              <strong>Drop a PDF here</strong>
+              <span class="meta">Text is extracted and split into bullet-level chunks on your machine. Takes a few minutes on CPU.</span>
+            </div>
+          </div>
+
+          <div class="card card-pad">
+            <div class="card-head">
+              <h2>Backend &amp; Data</h2>
+              <span class="badge badge-neutral">12 chunks</span>
+            </div>
+            <div>
+              <div class="chunk"><div class="chunk-top"><span class="badge badge-neutral">Ziplabs</span><span class="badge badge-neutral">Associate Software Engineer</span></div>Designed and implemented high-throughput ETL pipelines in Python and TypeScript, processing up to 25,000 records per minute into MongoDB.</div>
+              <div class="chunk"><div class="chunk-top"><span class="badge badge-neutral">Ziplabs</span><span class="badge badge-neutral">Associate Software Engineer</span></div>Built LLM-powered validation workflows using open-source models, achieving 97% accuracy.</div>
+              <div class="chunk"><div class="chunk-top"><span class="badge badge-neutral">MSA Software</span><span class="badge badge-neutral">Python Developer</span></div>Automated end-to-end data workflows using Cronjobs and Python scripts, reducing manual effort by 60%.</div>
+            </div>
+            <p class="helper">Showing 3 of 12 chunks.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ NOTES ============ -->
+      <section class="view" id="view-notes" aria-label="Prep notes">
+        <div class="two-col">
+          <div class="card card-pad">
+            <div class="card-head"><h2>New note</h2></div>
+            <div style="display:grid;gap:16px">
+              <div class="field"><label for="n-title">Title</label><input class="input" id="n-title" placeholder="e.g. RAG vs Fine-tuning"></div>
+              <div class="field"><label for="n-tags">Tags</label><input class="input" id="n-tags" placeholder="GenAI, LLM, RAG"></div>
+              <div class="field"><label for="n-body">Note</label><textarea class="textarea" id="n-body" rows="9" placeholder="Write it in your own words. Markdown works."></textarea></div>
+              <div><button class="btn btn-primary" type="button">Save note</button></div>
+            </div>
+          </div>
+
+          <div class="card card-pad">
+            <div class="card-head"><h2>Your notes</h2><span class="badge badge-neutral">3 notes</span></div>
+            <div>
+              <div class="note-item"><strong>RAG vs Fine-tuning</strong><p>RAG retrieves relevant context at query time and injects it into the prompt. No weight changes&hellip;</p><div class="tags"><span class="badge badge-neutral">GenAI</span><span class="badge badge-neutral">LLM</span><span class="badge badge-neutral">RAG</span></div></div>
+              <div class="note-item"><strong>Transformer Self-Attention</strong><p>Every token is projected into a Query, Key and Value vector&hellip;</p><div class="tags"><span class="badge badge-neutral">GenAI</span><span class="badge badge-neutral">architecture</span></div></div>
+              <div class="note-item"><strong>Bias-Variance Tradeoff</strong><p>Bias is error from a model that is too simple to capture the pattern&hellip;</p><div class="tags"><span class="badge badge-neutral">ML fundamentals</span></div></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ CHAT ============ -->
+      <section class="view" id="view-chat" aria-label="Model chat">
+        <div class="card card-pad chat-card">
+          <div class="card-head">
+            <div>
+              <h2>Model chat</h2>
+              <p class="meta">Talk to the local model directly. Not connected to your resume or notes.</p>
+            </div>
+            <span class="badge badge-accent">llama3.2:3b</span>
+          </div>
+
+          <div class="chat-log" id="chat-log">
+            <div class="msg user">Explain RAG in two sentences.</div>
+            <div class="msg bot">Retrieval-augmented generation looks up relevant documents at question time and adds them to the prompt, so the model can answer from your data without being retrained. It keeps answers current and grounded, since updating knowledge means updating the index rather than the model.</div>
+            <div class="msg user">Write a haiku about job hunting.</div>
+            <div class="msg bot" id="thinking-msg">
+              <span class="thinking" role="status" aria-live="polite">
+                <span class="spark"><svg width="18" height="18"><use href="#i-spark"/></svg></span>
+                <span class="shimmer">Thinking</span>
+                <span class="t">14s</span>
+              </span>
+            </div>
+          </div>
+
+          <form class="composer" id="composer">
+            <label for="chat-input" class="sr" style="position:absolute;left:-9999px">Message</label>
+            <textarea class="textarea" id="chat-input" rows="1" placeholder="Message the model&hellip;"></textarea>
+            <button class="btn btn-primary" type="submit" aria-label="Send"><svg width="18" height="18"><use href="#i-send"/></svg>Send</button>
+          </form>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ===== Bottom nav (mobile) ===== -->
+  <nav class="bottom-nav" aria-label="Main">
+    <button data-view="analyze" aria-current="page"><svg width="22" height="22"><use href="#i-analyze"/></svg>Analyze</button>
+    <button data-view="resumes"><svg width="22" height="22"><use href="#i-resume"/></svg>Resumes</button>
+    <button data-view="notes"><svg width="22" height="22"><use href="#i-note"/></svg>Notes</button>
+    <button data-view="chat"><svg width="22" height="22"><use href="#i-chat"/></svg>Chat</button>
+  </nav>
+</div>
+
+<script>
+  const META = {
+    analyze: ["Analyze a job", "See how your resume stacks up against a job description, requirement by requirement."],
+    resumes: ["Resumes", "Keep several versions and choose which one each analysis runs against."],
+    notes:   ["Prep notes", "Your own study notes. The most relevant ones surface with each analysis."],
+    chat:    ["Model chat", "A quick way to check the local model is up and see how it behaves."],
+  };
+
+  function show(view) {
+    document.querySelectorAll(".view").forEach(v => v.classList.toggle("active", v.id === "view-" + view));
+    document.querySelectorAll("[data-view]").forEach(b => {
+      if (b.dataset.view === view) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current");
+    });
+    document.getElementById("page-title").textContent = META[view][0];
+    document.getElementById("page-sub").textContent = META[view][1];
+    document.getElementById("resume-picker").hidden = view !== "analyze";
+    window.scrollTo(0, 0);
+  }
+  document.querySelectorAll("[data-view]").forEach(b => b.addEventListener("click", () => show(b.dataset.view)));
+
+  // Paste text / From link toggle
+  document.querySelectorAll(".seg button").forEach(btn => btn.addEventListener("click", () => {
+    document.querySelectorAll(".seg button").forEach(b => b.setAttribute("aria-pressed", String(b === btn)));
+    const link = btn.dataset.mode === "link";
+    document.getElementById("mode-paste").hidden = link;
+    document.getElementById("mode-link").hidden = !link;
+  }));
+
+  // Resume radio list keeps the picker and highlight in sync
+  const names = ["Backend & Data", "AI Engineer", "General"];
+  document.querySelectorAll('.resume input[type="radio"]').forEach((r, i) => r.addEventListener("change", () => {
+    document.querySelectorAll(".resume").forEach(el => el.dataset.active = "false");
+    r.closest(".resume").dataset.active = "true";
+    document.getElementById("resume-select").selectedIndex = i;
+  }));
+
+  // Thinking timer + a canned reply, just to show the states
+  let sec = 14;
+  const timer = setInterval(() => {
+    const t = document.querySelector("#thinking-msg .t");
+    if (!t) return clearInterval(timer);
+    t.textContent = (++sec) + "s";
+  }, 1000);
+
+  document.getElementById("composer").addEventListener("submit", e => {
+    e.preventDefault();
+    const input = document.getElementById("chat-input");
+    const text = input.value.trim();
+    if (!text) return;
+    const log = document.getElementById("chat-log");
+    const u = document.createElement("div"); u.className = "msg user"; u.textContent = text; log.appendChild(u);
+    input.value = "";
+    log.scrollTop = log.scrollHeight;
+  });
+</script>
+</body>
+</html>

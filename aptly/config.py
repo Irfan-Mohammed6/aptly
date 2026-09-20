@@ -128,6 +128,16 @@ RESUME_CHUNKS_DIR = DATA_DIR / "resume_chunks"
 #: over time both by hand and via the POST /add-note endpoint.
 CONCEPT_NOTES_DIR = DATA_DIR / "concept_notes"
 
+#: JSON file listing the uploaded resumes (id, display name, source filename,
+#: timestamps). Like the chunk files, it's a source of truth — the Chroma
+#: index is derived from it and the chunk files, never the other way round.
+RESUMES_REGISTRY_PATH = DATA_DIR / "resumes.json"
+
+#: Resume id given to resume chunks that predate multi-resume support (chunk
+#: files with no `resume_id` field), so nothing written before that feature
+#: is orphaned.
+DEFAULT_RESUME_ID = "default"
+
 # --- Chroma collection names ---------------------------------------------------
 
 #: Name of the Chroma collection holding embedded resume chunks.

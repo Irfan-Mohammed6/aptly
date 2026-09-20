@@ -1,6 +1,6 @@
 {
-  "company": "Ziplabs",
-  "role": "Associate Software Engineer",
+  "company": "Scaler",
+  "role": "Software Engineer \u2013 AI & Data",
   "text": "Developed ExpressJS APIs to integrate Node.js scraping output with Python data transformation pipelines, enabling seamless downstream MongoDB delivery.",
   "tags": [
     "ExpressJS",
@@ -9,5 +9,6 @@
     "MongoDB delivery",
     "seamless integration"
   ],
-  "id": "exp_022"
+  "id": "exp_010",
+  "resume_id": "irfan-resume-sept-2026"
 }

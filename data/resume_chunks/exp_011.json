@@ -1,13 +1,14 @@
 {
-  "company": "Ziplabs",
-  "role": "Associate Software Engineer",
+  "company": "Scaler",
+  "role": "Software Engineer \u2013 AI & Data",
   "text": "Designed and built end-to-end scalable data infrastructure, ETL pipelines, and AI-powered enrichment systems to process and deliver datasets ranging from 100K to 10 million records.",
   "tags": [
     "scalable data infrastructure",
     "ETL pipelines",
-    "AI-powered enrichment",
+    "AI-powered enrichment systems",
     "datasets",
     "100K to 10 million records"
   ],
-  "id": "exp_023"
+  "id": "exp_011",
+  "resume_id": "irfan-resume-sept-2026"
 }

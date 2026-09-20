@@ -29,6 +29,7 @@ Run standalone: not applicable. This is a library module — imported by
     "
 """
 
+import threading
 from typing import Any
 
 from chromadb import PersistentClient
@@ -60,6 +61,7 @@ class ChromaStore:
     """
 
     _instance: "ChromaStore | None" = None
+    _lock = threading.Lock()
 
     def __new__(cls) -> "ChromaStore":
         """Return the process-wide `ChromaStore` instance, creating it on first use.
@@ -72,17 +74,27 @@ class ChromaStore:
         guarded by `if cls._instance is None`, is what makes the singleton
         pattern actually skip the setup after the first call.
 
+        Creation is also guarded by a lock (double-checked), because the API
+        calls this from a thread pool: without it, several requests arriving
+        while the embedding model is still loading each saw "no instance yet"
+        and each loaded their own copy of the model — observed as the model
+        loading six times over at once and the first requests taking many
+        seconds. With the lock, concurrent callers wait for the one load in
+        progress and then share its result.
+
         Returns:
             The single shared `ChromaStore` instance for this process.
         """
         if cls._instance is None:
-            self = super().__new__(cls)
-            self.client = PersistentClient(path=str(config.CHROMA_PERSIST_DIR))
-            self.embedding_function = embedding_functions.SentenceTransformerEmbeddingFunction(
-                model_name=config.EMBEDDING_MODEL
-            )
-            self._collections: dict[str, Any] = {}
-            cls._instance = self
+            with cls._lock:
+                if cls._instance is None:
+                    self = super().__new__(cls)
+                    self.client = PersistentClient(path=str(config.CHROMA_PERSIST_DIR))
+                    self.embedding_function = embedding_functions.SentenceTransformerEmbeddingFunction(
+                        model_name=config.EMBEDDING_MODEL
+                    )
+                    self._collections: dict[str, Any] = {}
+                    cls._instance = self
         return cls._instance
 
     def get_or_create_collection(self, name: str) -> Any:
@@ -165,7 +177,29 @@ class ChromaStore:
             ids=ids, documents=documents, metadatas=metadatas
         )
 
-    def query(self, collection_name: str, text: str, k: int = config.TOP_K) -> list[dict]:
+    def delete_where(self, collection_name: str, where: dict) -> None:
+        """Delete every document in a collection whose metadata matches a filter.
+
+        Used when a resume is deleted, to remove exactly that resume's chunks
+        from the index (`where={"resume_id": ...}`) and leave every other
+        resume untouched.
+
+        Args:
+            collection_name: Which collection to delete from.
+            where: A Chroma metadata filter, e.g. `{"resume_id": "ai-engineer"}`.
+
+        Returns:
+            None. Deleting when nothing matches is a no-op.
+        """
+        self.get_or_create_collection(collection_name).delete(where=where)
+
+    def query(
+        self,
+        collection_name: str,
+        text: str,
+        k: int = config.TOP_K,
+        where: dict | None = None,
+    ) -> list[dict]:
         """Find the k nearest documents to `text` in a collection.
 
         Args:
@@ -176,6 +210,9 @@ class ChromaStore:
                 meaningful.
             k: How many nearest neighbours to return. Defaults to
                 `config.TOP_K`.
+            where: Optional Chroma metadata filter restricting which
+                documents can match, e.g. `{"resume_id": "default"}` to
+                search a single resume's chunks. `None` searches everything.
 
         Returns:
             A list of up to `k` dicts (fewer if the collection has fewer
@@ -191,7 +228,10 @@ class ChromaStore:
                   collection created with a different distance metric, this
                   arithmetic would not produce a meaningful similarity score.
         """
-        result = self.get_or_create_collection(collection_name).query(query_texts=[text], n_results=k)
+        kwargs = {"where": where} if where else {}
+        result = self.get_or_create_collection(collection_name).query(
+            query_texts=[text], n_results=k, **kwargs
+        )
         return [
             {"id": id_, "document": document, "metadata": metadata, "similarity": 1 - distance}
             for id_, document, metadata, distance in zip(

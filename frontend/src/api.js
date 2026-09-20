@@ -36,9 +36,76 @@ async function parseJsonOrThrow(response) {
     } catch {
       // Response body wasn't JSON — fall back to statusText, already set above.
     }
-    throw new Error(`${response.status}: ${detail}`);
+    throw new Error(typeof detail === "string" ? detail : `${response.status}: request failed`);
   }
+  if (response.status === 204) return null;
   return response.json();
+}
+
+/**
+ * fetch() wrapper that turns a network failure (backend not running, CORS
+ * block) into an error message a person can act on, instead of the browser's
+ * bare "Failed to fetch".
+ *
+ * @param {string} path - Path on the API, e.g. "/resumes".
+ * @param {RequestInit} [options] - Passed through to fetch.
+ * @returns {Promise<Response>}
+ */
+async function request(path, options) {
+  try {
+    return await fetch(`${API_BASE_URL}${path}`, options);
+  } catch {
+    throw new Error(`Can't reach the Aptly backend at ${API_BASE_URL}. Is it running?`);
+  }
+}
+
+/** @returns {Promise<object[]>} Every uploaded resume with its chunk count. */
+export async function listResumes() {
+  return parseJsonOrThrow(await request("/resumes"));
+}
+
+/**
+ * @param {string} id - Resume id.
+ * @returns {Promise<object[]>} That resume's chunks (id, company, role, text, tags).
+ */
+export async function getResumeChunks(id) {
+  return parseJsonOrThrow(await request(`/resumes/${encodeURIComponent(id)}/chunks`));
+}
+
+/**
+ * @param {string} id - Resume id.
+ * @param {string} name - New display name.
+ * @returns {Promise<object>} The updated resume.
+ */
+export async function renameResume(id, name) {
+  return parseJsonOrThrow(
+    await request(`/resumes/${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name }),
+    })
+  );
+}
+
+/**
+ * Delete a resume along with its chunks.
+ *
+ * Idempotent: deleting a resume that's already gone (a 404) counts as success,
+ * since the end state is what the caller wanted — this matters when a slow
+ * request gets clicked twice and the second one finds nothing left to delete.
+ *
+ * @param {string} id - Resume id.
+ * @returns {Promise<null>}
+ */
+export async function deleteResume(id) {
+  const response = await request(`/resumes/${encodeURIComponent(id)}`, { method: "DELETE" });
+  if (response.status === 404) return null;
+  return parseJsonOrThrow(response);
+}
+
+/** @returns {Promise<{id: string, title: string, tags: string[], body: string}[]>} Every concept note. */
+export async function listNotes() {
+  return parseJsonOrThrow(await request("/notes"));
 }
 
 /**
@@ -49,13 +116,15 @@ async function parseJsonOrThrow(response) {
  * per-requirement retrieval, deterministic scoring).
  *
  * @param {string} jdText - The full raw job description text.
+ * @param {string|null} resumeId - Which resume to analyze against (an id from
+ *   `listResumes`); null matches against every resume's chunks.
  * @returns {Promise<{fit_score: number, strengths: object[], gaps: object[]}>}
  */
-export async function analyzeJD(jdText) {
-  const response = await fetch(`${API_BASE_URL}/analyze-jd`, {
+export async function analyzeJD(jdText, resumeId = null) {
+  const response = await request("/analyze-jd", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ jd_text: jdText }),
+    body: JSON.stringify({ jd_text: jdText, resume_id: resumeId }),
   });
   return parseJsonOrThrow(response);
 }
@@ -69,7 +138,7 @@ export async function analyzeJD(jdText) {
  * @returns {Promise<{notes: object[]}>}
  */
 export async function prepList(jdText) {
-  const response = await fetch(`${API_BASE_URL}/prep-list`, {
+  const response = await request("/prep-list", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ jd_text: jdText }),
@@ -89,7 +158,7 @@ export async function prepList(jdText) {
  * @returns {Promise<{note_id: string}>}
  */
 export async function addNote(title, tags, body) {
-  const response = await fetch(`${API_BASE_URL}/add-note`, {
+  const response = await request("/add-note", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ title, tags, body }),
@@ -98,19 +167,41 @@ export async function addNote(title, tags, body) {
 }
 
 /**
- * Upload a PDF resume and automatically populate resume chunks from it.
+ * Chat with the local model — a plain conversation, not part of the analysis
+ * pipeline, used by the "Model Chat" tab to sanity-check the model.
+ *
+ * Calls `POST /chat`. The backend is stateless, so the full conversation so
+ * far is sent every time.
+ *
+ * @param {{role: "user"|"assistant"|"system", content: string}[]} messages
+ * @returns {Promise<{reply: string, model: string}>}
+ */
+export async function chat(messages) {
+  const response = await request("/chat", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ messages }),
+  });
+  return parseJsonOrThrow(response);
+}
+
+/**
+ * Upload a PDF resume as a new, named resume and populate its chunks.
  *
  * Calls `POST /upload-resume` with a multipart/form-data body. See
  * `aptly.api.routes_resume.upload_resume` on the backend for the
- * extract-then-chunk-then-index pipeline this triggers.
+ * extract-then-chunk-then-index pipeline this triggers. Takes minutes on
+ * CPU-only hardware.
  *
  * @param {File} file - The resume file selected by the user, expected to be a PDF.
- * @returns {Promise<{chunks_created: number}>}
+ * @param {string} name - Display name for the new resume.
+ * @returns {Promise<{chunks_created: number, resume_id: string, name: string}>}
  */
-export async function uploadResume(file) {
+export async function uploadResume(file, name) {
   const formData = new FormData();
   formData.append("file", file);
-  const response = await fetch(`${API_BASE_URL}/upload-resume`, {
+  formData.append("name", name);
+  const response = await request("/upload-resume", {
     method: "POST",
     body: formData,
   });

@@ -3,15 +3,21 @@
 # Author: Irfan Mohammed
 # License: MIT — see LICENSE file in the project root.
 # =============================================================================
-"""The POST /upload-resume endpoint: turn an uploaded PDF resume into resume chunks.
+"""Resume endpoints: upload a PDF resume, and list / preview / rename / delete them.
 
-Automates what was previously a manual step — hand-writing one JSON file per
-resume bullet in `data/resume_chunks/` (see docs/ARCHITECTURE.md §5). A
-candidate uploads their resume as a PDF; the text is extracted, an LLM call
-splits it into per-bullet chunks (`aptly.llm.schemas.ExtractedResumeChunks`),
-and those chunks are written to disk and indexed exactly as if they had been
-hand-authored — the file-first, disk-is-the-source-of-truth model is
-unchanged, only how the files get created is new.
+`POST /upload-resume` automates what was previously a manual step —
+hand-writing one JSON file per resume bullet in `data/resume_chunks/` (see
+docs/ARCHITECTURE.md §5). A candidate uploads their resume as a PDF; the text
+is extracted, an LLM call splits it into per-bullet chunks
+(`aptly.llm.schemas.ExtractedResumeChunks`), and those chunks are written to
+disk and indexed exactly as if they had been hand-authored — the file-first,
+disk-is-the-source-of-truth model is unchanged, only how the files get
+created is new.
+
+Several resumes can coexist: each upload becomes its own named resume, and
+`GET /resumes`, `GET /resumes/{id}/chunks`, `PATCH /resumes/{id}` and
+`DELETE /resumes/{id}` manage them. `POST /analyze-jd` then takes a
+`resume_id` to choose which one an analysis runs against.
 
 Run standalone: not applicable — this module only defines a FastAPI
 `APIRouter`, it has no entry point of its own. Start the whole application
@@ -25,11 +31,18 @@ import io
 import re
 
 import pypdf
-from fastapi import APIRouter, HTTPException, UploadFile
+from fastapi import APIRouter, Form, HTTPException, Response, UploadFile
 from fastapi.concurrency import run_in_threadpool
 
-from aptly.api.models import UploadResumeResponse
+from aptly.api.models import RenameResumeRequest, ResumeChunkInfo, ResumeInfo, UploadResumeResponse
 from aptly.ingestion.resume import ingest_resume_chunks, load_resume_chunks, write_resume_chunks
+from aptly.ingestion.resumes import (
+    create_resume,
+    delete_resume,
+    get_resume,
+    list_resumes,
+    rename_resume,
+)
 from aptly.llm.client import call as llm_call
 from aptly.llm.prompts import extract_resume_chunks_prompt
 from aptly.llm.schemas import ExtractedResumeChunks
@@ -199,8 +212,8 @@ def _dedupe_and_filter_chunks(chunks: list[dict]) -> list[dict]:
     return kept
 
 
-def _process_resume(pdf_bytes: bytes) -> int:
-    """Run the full extract -> write -> ingest pipeline for one uploaded resume.
+def _process_resume(pdf_bytes: bytes, name: str, filename: str) -> tuple[dict, int]:
+    """Run the full extract -> register -> write -> ingest pipeline for one uploaded resume.
 
     Internal helper for `upload_resume` — not part of the module's public
     interface. Split out so the entire pipeline (PDF text extraction, the
@@ -221,11 +234,18 @@ def _process_resume(pdf_bytes: bytes) -> int:
     filesystem drifting apart. At the scale of a single resume (a few dozen
     chunks at most), re-embedding everything on each upload is cheap.
 
+    The resume is only registered (`aptly.ingestion.resumes.create_resume`)
+    *after* extraction succeeds, so a failed upload doesn't leave an empty
+    resume in the list.
+
     Args:
         pdf_bytes: The raw bytes of the uploaded PDF resume.
+        name: Display name for the new resume.
+        filename: The uploaded file's original name.
 
     Returns:
-        The number of new resume chunks extracted and written.
+        A tuple of the new resume's registry entry and the number of chunks
+        extracted and written for it.
 
     Raises:
         HTTPException: 422 if no extractable text is found in the PDF (e.g.
@@ -243,20 +263,25 @@ def _process_resume(pdf_bytes: bytes) -> int:
     extracted = llm_call(extract_resume_chunks_prompt(resume_text), ExtractedResumeChunks)
     new_chunks = [chunk.model_dump() for chunk in extracted.chunks]
     new_chunks = _dedupe_and_filter_chunks(new_chunks)
-    write_resume_chunks(new_chunks)
+    if not new_chunks:
+        raise HTTPException(status_code=422, detail="No resume bullets could be extracted from that PDF.")
+
+    resume = create_resume(name, filename)
+    write_resume_chunks(new_chunks, resume["id"])
     ingest_resume_chunks(load_resume_chunks())
-    return len(new_chunks)
+    return resume, len(new_chunks)
 
 
 @router.post("/upload-resume", response_model=UploadResumeResponse)
-async def upload_resume(file: UploadFile) -> UploadResumeResponse:
-    """Upload a PDF resume and automatically populate resume chunks from it.
+async def upload_resume(file: UploadFile, name: str | None = Form(default=None)) -> UploadResumeResponse:
+    """Upload a PDF resume and add it as a new, separately named resume.
 
     Extracts text from the uploaded PDF, asks the LLM to split it into
     per-bullet chunks, writes each as a new JSON file in
-    `data/resume_chunks/`, and re-indexes the resume_chunks Chroma
-    collection from the full contents of that directory — see
-    `_process_resume` for the pipeline details.
+    `data/resume_chunks/` tagged with the new resume's id, and re-indexes the
+    resume_chunks Chroma collection from the full contents of that
+    directory — see `_process_resume` for the pipeline details. Existing
+    resumes are left untouched: each upload creates a new resume.
 
     The entire pipeline is dispatched via
     `fastapi.concurrency.run_in_threadpool` since it involves a blocking LLM
@@ -266,9 +291,12 @@ async def upload_resume(file: UploadFile) -> UploadResumeResponse:
     Args:
         file: The uploaded file, expected to be a PDF (validated by
             filename extension / content type before processing).
+        name: Optional display name (form field). Defaults to the file's
+            name without its extension.
 
     Returns:
-        An `UploadResumeResponse` with the count of new chunks created.
+        An `UploadResumeResponse` with the new resume's id and name and the
+        count of chunks created.
 
     Raises:
         HTTPException: 422 if the uploaded file isn't a PDF, or if no text
@@ -280,6 +308,64 @@ async def upload_resume(file: UploadFile) -> UploadResumeResponse:
     if not is_pdf:
         raise HTTPException(status_code=422, detail="Only PDF resumes are supported.")
 
+    filename = file.filename or ""
+    display_name = (name or "").strip() or re.sub(r"\.pdf$", "", filename, flags=re.IGNORECASE) or "Resume"
+
     pdf_bytes = await file.read()
-    chunks_created = await run_in_threadpool(_process_resume, pdf_bytes)
-    return UploadResumeResponse(chunks_created=chunks_created)
+    resume, chunks_created = await run_in_threadpool(_process_resume, pdf_bytes, display_name, filename)
+    return UploadResumeResponse(chunks_created=chunks_created, resume_id=resume["id"], name=resume["name"])
+
+
+@router.get("/resumes", response_model=list[ResumeInfo])
+async def get_resumes() -> list[ResumeInfo]:
+    """List all uploaded resumes, oldest first, each with its chunk count."""
+    return await run_in_threadpool(list_resumes)
+
+
+@router.get("/resumes/{resume_id}/chunks", response_model=list[ResumeChunkInfo])
+async def get_resume_chunks(resume_id: str) -> list[ResumeChunkInfo]:
+    """Return one resume's chunks, for previewing what was extracted from it.
+
+    Raises:
+        HTTPException: 404 if there is no such resume.
+    """
+    if await run_in_threadpool(get_resume, resume_id) is None:
+        raise HTTPException(status_code=404, detail="Resume not found.")
+    chunks = await run_in_threadpool(load_resume_chunks, resume_id)
+    return [
+        ResumeChunkInfo(
+            id=c["id"],
+            company=c.get("company", ""),
+            role=c.get("role", ""),
+            text=c["text"],
+            tags=c.get("tags", []),
+        )
+        for c in chunks
+    ]
+
+
+@router.patch("/resumes/{resume_id}", response_model=ResumeInfo)
+async def patch_resume(resume_id: str, request: RenameResumeRequest) -> ResumeInfo:
+    """Rename a resume. Its id, and so its chunks' link to it, doesn't change.
+
+    Raises:
+        HTTPException: 422 for an empty name; 404 if there is no such resume.
+    """
+    if not request.name.strip():
+        raise HTTPException(status_code=422, detail="Name must not be empty.")
+    updated = await run_in_threadpool(rename_resume, resume_id, request.name)
+    if updated is None:
+        raise HTTPException(status_code=404, detail="Resume not found.")
+    return updated
+
+
+@router.delete("/resumes/{resume_id}", status_code=204)
+async def remove_resume(resume_id: str) -> Response:
+    """Delete a resume along with its chunk files and index entries.
+
+    Raises:
+        HTTPException: 404 if there is no such resume.
+    """
+    if not await run_in_threadpool(delete_resume, resume_id):
+        raise HTTPException(status_code=404, detail="Resume not found.")
+    return Response(status_code=204)

@@ -17,9 +17,101 @@ auto-generated OpenAPI docs at `/docs`) — imported by
 `aptly.api.routes_jd` and `aptly.api.routes_notes`.
 """
 
+from typing import Literal
+
 from pydantic import BaseModel
 
 from aptly.retrieval.match import RequirementMatch
+
+
+class ChatMessage(BaseModel):
+    """One message in a `/chat` conversation.
+
+    Attributes:
+        role: Who said it — "user", "assistant" (the model's earlier
+            replies), or "system" (optional instructions).
+        content: The message text.
+    """
+
+    role: Literal["system", "user", "assistant"]
+    content: str
+
+
+class ChatRequest(BaseModel):
+    """Request body for `POST /chat`.
+
+    Attributes:
+        messages: The conversation so far, oldest first, ending with the
+            new user message. The server is stateless — the client resends
+            the history on every request.
+    """
+
+    messages: list[ChatMessage]
+
+
+class ChatResponse(BaseModel):
+    """Response body for `POST /chat`.
+
+    Attributes:
+        reply: The model's reply text.
+        model: The Ollama model tag that produced it (`config.OLLAMA_MODEL`),
+            shown in the UI so it's clear which model is being tested.
+    """
+
+    reply: str
+    model: str
+
+
+class ResumeInfo(BaseModel):
+    """One uploaded resume, as returned by `GET /resumes`.
+
+    Attributes:
+        id: Stable id (also the `resume_id` on each of its chunks).
+        name: Display name shown in the UI.
+        filename: The originally uploaded file's name ("" if unknown).
+        chunk_count: How many bullet-level chunks it currently has.
+        created_at: ISO-8601 UTC timestamp.
+        updated_at: ISO-8601 UTC timestamp of the last change.
+    """
+
+    id: str
+    name: str
+    filename: str
+    chunk_count: int
+    created_at: str
+    updated_at: str
+
+
+class ResumeChunkInfo(BaseModel):
+    """One chunk of a resume, for the "view resume" preview."""
+
+    id: str
+    company: str
+    role: str
+    text: str
+    tags: list[str]
+
+
+class RenameResumeRequest(BaseModel):
+    """Request body for `PATCH /resumes/{id}`."""
+
+    name: str
+
+
+class NoteInfo(BaseModel):
+    """One concept note, as returned by `GET /notes`.
+
+    Attributes:
+        id: The note's id (its filename stem).
+        title: Display title.
+        tags: Its tags.
+        body: The full Markdown body.
+    """
+
+    id: str
+    title: str
+    tags: list[str]
+    body: str
 
 
 class AnalyzeJDRequest(BaseModel):
@@ -29,9 +121,12 @@ class AnalyzeJDRequest(BaseModel):
         jd_text: The full raw text of a job description, pasted as-is. Not
             expected to be pre-chunked or pre-processed by the caller —
             requirement extraction happens server-side.
+        resume_id: Which resume to analyze against (an id from
+            `GET /resumes`). `None` matches against every resume's chunks.
     """
 
     jd_text: str
+    resume_id: str | None = None
 
 
 class AnalyzeJDResponse(BaseModel):
@@ -89,9 +184,13 @@ class UploadResumeResponse(BaseModel):
         chunks_created: How many new resume chunk JSON files were written
             to `data/resume_chunks/` and indexed, from the uploaded PDF —
             see `aptly.api.routes_resume.upload_resume`.
+        resume_id: Id of the resume these chunks were saved under.
+        name: The resume's display name.
     """
 
     chunks_created: int
+    resume_id: str
+    name: str
 
 
 class PrepListRequest(BaseModel):

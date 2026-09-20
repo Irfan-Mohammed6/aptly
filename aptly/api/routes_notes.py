@@ -30,16 +30,38 @@ from aptly import config
 from aptly.api.models import (
     AddNoteRequest,
     AddNoteResponse,
+    NoteInfo,
     PrepListRequest,
     PrepListResponse,
 )
-from aptly.ingestion.notes import ingest_concept_notes, write_concept_note
+from aptly.ingestion.notes import ingest_concept_notes, load_concept_notes, write_concept_note
 from aptly.llm.client import call as llm_call
 from aptly.llm.prompts import extract_requirements_prompt
 from aptly.llm.schemas import ExtractedRequirement, ExtractedRequirements
 from aptly.retrieval.store import get_store
 
 router = APIRouter()
+
+
+@router.get("/notes", response_model=list[NoteInfo])
+async def list_notes() -> list[NoteInfo]:
+    """List every concept note on disk, for the notes view.
+
+    Reads the note files directly (`load_concept_notes`) — the Markdown files
+    are the source of truth, not the Chroma index — so it always reflects
+    what's actually saved, including notes added by hand.
+
+    Returns:
+        One `NoteInfo` per note, sorted by title.
+    """
+    notes = await run_in_threadpool(load_concept_notes)
+    return sorted(
+        (
+            NoteInfo(id=n["id"], title=n["title"], tags=list(n.get("tags", [])), body=n["body"])
+            for n in notes
+        ),
+        key=lambda n: n.title.lower(),
+    )
 
 
 @router.post("/add-note", response_model=AddNoteResponse)

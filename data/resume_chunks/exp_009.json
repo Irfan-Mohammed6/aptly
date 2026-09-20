@@ -1,6 +1,6 @@
 {
-  "company": "Ziplabs",
-  "role": "Associate Software Engineer",
+  "company": "Scaler",
+  "role": "Software Engineer \u2013 AI & Data",
   "text": "Automated end-to-end data workflows using Cronjobs and Python scripts \u2014 reducing manual processing effort by 60%.",
   "tags": [
     "Cronjobs",
@@ -9,5 +9,6 @@
     "manual processing effort",
     "60% reduction"
   ],
-  "id": "exp_021"
+  "id": "exp_009",
+  "resume_id": "irfan-resume-sept-2026"
 }

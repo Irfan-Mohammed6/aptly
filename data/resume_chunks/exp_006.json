@@ -1,6 +1,6 @@
 {
-  "company": "Ziplabs",
-  "role": "Associate Software Engineer",
+  "company": "Scaler",
+  "role": "Software Engineer \u2013 AI & Data",
   "text": "Leveraged AI tools including Cursor and Claude Code to accelerate development cycles and improve delivery efficiency.",
   "tags": [
     "AI tools",
@@ -9,5 +9,6 @@
     "development cycles",
     "delivery efficiency"
   ],
-  "id": "exp_018"
+  "id": "exp_006",
+  "resume_id": "irfan-resume-sept-2026"
 }
